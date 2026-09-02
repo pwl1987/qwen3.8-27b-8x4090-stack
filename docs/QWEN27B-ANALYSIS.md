@@ -514,3 +514,106 @@ autoresearch = 630 行/单 GPU/5 分钟迭代的 agent 自主研究循环。借�
 - **三安全阀**：①模型坍缩→每轮混入真实锚点数据（CommitPackFT/官方
   reasoning）+多样性监控；②尺子过拟合→四轴分轮换+永不入循环的人工验证集
   仲裁；③部署治理→自动循环只产候选，提升须人工晨审（夜航自进化/清晨晋升）
+
+
+## 12. SGLang 可行性评估与 GPU 分工共存方案（2026-09-02）
+
+> 背景：生产侧（llama.cpp 4 副本 + OpenResty LB）已稳定，RFT 回路的瓶颈从生成侧转移到
+> **LoRA 候选评估链**（swift ckpt → GGUF 转换 → √r 补偿 → 双实例门禁）。vLLM 在 5.2 路线二
+> 已评估（吞吐换运维，迁移成本高）；SGLang 的两个独有能力（原生 Multi-LoRA 热挂、
+> RadixAttention 前缀 radix tree）是 vLLM 路线未覆盖的增量，单独立项评估。
+> 数据可信度：本节显存账=一手推导（参数×字节数，无实测修正）；其余待 Step 1-4 实测回填。
+
+### 12.1 显存账：形态判定（一手推导，27.3B 参数）
+
+| 权重格式 | 体积 | 单卡 24.56G | TP2/卡 | 256K KV 余量 |
+|---|---|---|---|---|
+| BF16 | 54.6 GB | ❌ | **27.3G ❌ 连 TP2 都超 4090 上限** | — |
+| FP8 (E4M3) | ~27.3 GB | ❌ | **13.65G ✅** | ✅ ~6G/卡（KV TP 分片后 256K 仅 ~2.3G/卡） |
+| AWQ/GPTQ INT4 | ~16-18 GB | ⚠️ 勉强 | — | ⚠️ 256K 被挤到 ~128K，且需重量化 |
+| **现役 llama.cpp iq4_xs** | **14.3 GB** | ✅ | — | ✅ 97% 满载实测（2.1/2.2 节） |
+
+**判定**：SGLang 的量化生态（BF16/FP8/AWQ）没有 4.2bpw 级压缩，GGUF 支持不成熟 →
+**SGLang 无法复刻单卡 256K 形态，不是生产替换项，是补位项**。
+
+### 12.2 SGLang 独有价值（三块拼图）
+
+1. **原生 Multi-LoRA 热挂**（`--enable-lora`，请求级 `lora_name` 路由）：
+   RFT 候选评估跳过整条 GGUF 转换链（GDN out_proj 补丁 + `--lora-scaled :5.657` √r 补偿）。
+   且**多候选可共存单进程**——一夜 N 个候选 LoRA 并行过门禁，自进化循环从串行变并行（见 12.4）
+2. **RadixAttention**（进程内前缀 radix tree，自动增量 prefill + 跨请求共享 trunk）：
+   注意边界——它是**进程内**机制，跨副本的会话粘滞路由仍然需要；OpenResty Lua LB 不白做，
+   降级为通用多后端 LB（健康/漂移/池分流 + 粘滞），route.lua 增补 SGLang 后端探测
+3. **FP8 TP2 + overlap scheduling + chunked prefill**：48 路并发聚合吞吐是现役唯一没摸到的
+   指标（16 slot 排队兜底 ~420 tok/s，5.1 节）；MTP 层权重原生在 BF16 里
+   （`mtp_num_hidden_layers=1`, `mtp_use_dedicated_embeddings=false`），SGLang MTP 路径若支持
+   qwen3_5 混合架构可直接启用（接受率对照 llama.cpp 46.6% 实测基线）；
+   结构化输出（xgrammar）对 xfc 工具轴有直接收益
+
+### 12.3 GPU 分工共存方案（不是二选一）
+
+| GPU | 用途 | 说明 |
+|---|---|---|
+| 0-3 | llama.cpp 4 副本（生产，不动） | iq4_xs + MTP + 256K，97% 显存，单流/长上下文/VRAM 天花板 |
+| 4-5 | 门禁（2026-09-02 17:29 进行中，跑完释放） | A/B 双实例 |
+| 6-7 | **SGLang FP8 TP2 单实例** | RFT 生成产能 + LoRA 候选评估 + 夜航自进化循环专用 |
+
+FP8 TP2 每卡预算：权重 13.65G + 256K KV(TP 分片) 2.3G + GDN 态(分片) + 激活/CUDA ctx ~1G
+≈ 18G/卡，余量 ~6G → 可跑 256K 但并发长上下文容量小于 llama.cpp 单副本（97% 满载），
+定位是**隔离产能**不是替代产能。
+
+### 12.4 RFT 回路重构（SGLang 引入后）
+
+现行链（每候选）：生成(生产 LB) → 过滤 → QLoRA(GPU4-7) → **GGUF 转换(补丁)** →
+**llama.cpp 双实例门禁(冷启动 ~50s×2 + 全轴 ruler)** → 晋级者热挂
+
+SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA → **单进程多 LoRA A/B**
+（base + N 个候选同进程，`lora_name` 请求级路由，一次 ruler 全候选全轴对比）→
+**仅晋级者**转 GGUF 进 llama.cpp 生产（转换成本从每候选摊销到每夜一次）
+
+收益：候选评估端到端从小时级（转换+双实例冷启动）降到分钟级；夜间窗口从 1 候选/夜
+提升到 3-5 候选/夜（显存允许 3-5 个 r32 适配器共存，每 adapter ~0.4G）。
+
+### 12.5 验证路线（按可信度排序，生死问题最便宜先做）
+
+1. **Step 0**：等门禁 A/B 跑完（不占 GPU4/5，不碰生产）
+2. **Step 1**：新容器（训练容器 cuda12.4 基底复用）装 SGLang，**首要验证 qwen3_5 混合 GDN
+   架构是否在模型注册表**（`model_type=qwen3_5` / `Qwen3_5ForConditionalGeneration`）——
+   这一步不过全案作废，成本最低先做
+3. **Step 2**：BF16 原版 FP8 量化（compressed-tensors；**免 imatrix**——直接 16→8bit 无校准
+   步骤，绕开现役 GGUF 量化 93 chunks imatrix 的已知弱点，2.2 节）
+4. **Step 3**：GPU6/7 TP2 起服务，同套 ruler 跑基线（humaneval/xfc/gsm8k/ifeval/needle/tps）
+   ——先证正确性（对照 12.7 基线表），再谈速度
+5. **Step 4**：门禁完成后 A/B 吞吐：llama.cpp 4 副本 vs SGLang TP2×2（GPU4-5/6-7），
+   16/48 路并发，三指标 TTFT + 聚合 tps + 前缀命中时延；MTP 接受率对照 46.6%
+6. **产出**：仓库 `deploy/sglang/`（compose + 量化脚本 + route.lua v5 后端类型增补）+ 对照表
+   （方法论同 3 节三仓库对照 + 7.9 渐进压测）
+
+### 12.6 决策矩阵
+
+| 场景 | 选择 | 理由 |
+|---|---|---|
+| 单流延迟 / 256K 长上下文 / VRAM 极限 | llama.cpp | iq4_xs 单卡 97%，SGLang 无对应形态 |
+| RFT 候选评估 / 多 LoRA 并行门禁 | **SGLang** | 原生热挂，免转换链 |
+| 高并发聚合吞吐 | 待 Step 4 实测 | 现役 420 tok/s 是唯一参照系 |
+| 结构化输出（工具/agent 轴） | SGLang 优先 | xgrammar 硬约束，xfx 轴直接受益 |
+| 前缀缓存（同进程内） | SGLang RadixAttention | 自动，免手工粘滞 |
+| 前缀缓存（跨副本路由） | OpenResty LB 保留 | RadixAttention 不跨进程 |
+
+### 12.7 待实测项（Step 1-4 完成后回填本节）
+
+- [ ] qwen3_5 是否在 SGLang 模型注册表（生死项，Step 1）
+- [ ] FP8 E4M3 量化后 ruler 全轴 vs 基线（Step 3，任何轴回退 >2pp 则该格式作废）
+- [ ] SGLang MTP 路径对 qwen3_5 的支持与接受率（对照 46.6%）
+- [ ] 48 路并发聚合 tps vs 420；TTFT vs 现役排队兜底
+- [ ] RadixAttention 前缀命中 TTFT vs 粘滞 LB + `--cache-reuse 2048`
+- [ ] Multi-LoRA 3-5 候选同进程显存账与 ruler 端到端时间
+- [ ] 24h 稳定性（FP8 TP2 + 连续 RFT 负载）
+
+### 12.8 不要做
+
+- ❌ AWQ INT4 单卡挤 256K：重量化质量风险 + GDN 线性层支持不确定，双风险换无收益
+  （FP8 TP2 严格更优且留 6G 余量）
+- ❌ 为 SGLang 实验下生产副本（GPU0-3）：生产 SLA（48 路全成功）优先
+- ❌ 跳过 Step 3 ruler 直接比吞吐：正确性未证前速度数据无意义（7.9 渐进压测原则）
+- ❌ 用 SGLang 替代粘滞 LB 的跨副本路由：机制边界不同，见 12.2-2
