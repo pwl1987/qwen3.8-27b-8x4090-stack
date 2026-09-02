@@ -890,7 +890,7 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 | 前缀复用 | `--cache-reuse` | APC | **RadixAttention**（最强） |
 | 投机 | MTP draft (q8_0) | MTP/EAGLE | **NEXTN/MTP**（head 内建，无独立 draft 权重） |
 | multi-LoRA | 无 | 中 | **最强（RFT 主战场）** |
-| 长上下文 | 单副本 256K | 强 | 256K 单序列容纳（§15.5 实测） |
+| 长上下文 | 单副本 256K（真 256K） | 强 | **~217K** 单序列（KV 池 216938，见 §15.5 更正注） |
 | 本机部署 | 已装（生产） | **未装** | 已装 + `qwen3_5.py` 定制模型文件 |
 
 - **vLLM 未纳入 A/B 的原因**：本机 8 个 Python 环境（`/data/sglang/venv`、`/usr/bin`、miniforge `torch`/`cuda124`）均未安装 vLLM；`qwen3.5` 是 hybrid-GDN 新架构（SGLang 0.5.10 都需要定制 `qwen3_5.py` 模型文件），vLLM 需先补 `qwen3_5` 架构支持再装，属非平凡集成。预期 vLLM（PagedAttention/FP8/TP）与 SGLang 相近，SGLang 在 RadixAttention 前缀复用 + MTP/NEXTN + multi-LoRA 上略优。→ vLLM 列为**可选第三数据点**（§15.9 待办），不阻塞 2 卡 SGLang 决策（SGLang 已实证 ≥ llama.cpp）。
@@ -919,10 +919,11 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 | 聚合 c16 (tok/s) | 287.8 | 190.7 | 131.7 |
 | 聚合 饱和 (tok/s) | **293.3**（c24） | 210.0（c24） | **~130**（c12-24） |
 | 每卡 (tok/s/card) | **146.5** | 105 | **32.5** |
-| 256K 单序列 | **容纳**（52tok，30 tok/s） | KV 池缩小（draft 权重占 ~1.2G） | 单副本容纳（ctx 262144） |
+| 256K 单序列 | **~210K 实为封顶**（KV 池 216938；见更正注） | KV 池缩小（draft 权重占 ~1.2G） | 单副本容纳（ctx 262144，真 256K） |
 | 质量 spot-check | math 2/3, needle OK | （MTP 不改质量） | math 1/3, needle false（小样本） |
 | MTP 接受率 | — | 0.86-1.00，~1.8-2.0 tok/step | — |
 
+- **对 "256K 容纳" 的更正（2026-09-03，重要）**：表中 SGLang non-MTP 的 "256K 容纳" 为**虚标**——A/B `tps_256k` 实测 prompt 实为 **209,722 token**（`ab_bench.make_prompt(ctx_tokens)` 用 `n_tokens//10` 估重复句数，262144→26214 句≈210K），**从未真塞 262144**。SGLang 实测 KV 池 = **216,938 token**（mem-frac 0.90, TP2, FP8 KV ≈32KB/token，是 llama q4_0 ~16KB 的 2×，同显存只装一半 token）→ 单请求硬上限 **216,932**（超限 400 拒绝；实测 234K 被拒、198.9K 通过）。→ **2 卡 SGLang 真 256K 塞不下**；>217K 场景只能走 llama.cpp 副本。用户 2026-09-03 决策：接受 ~217K 上限，保持 mem-frac 0.90（SGLang 定位聚合吞吐 + ≤200K 长文）。
 - **单流 34.8 的口径**：completions API、短提示（质数）、**raw decode 率**（无推理 token 稀释）。推理模型走 chat API 时 thinking token 计入 `completion_tokens`，内容率会更低——**决策指标用聚合，不用单流**。
 - **对 §14.6 外推的修正（重要）**：§14.6 依 0xSero（TP1 43 → TP2 113 → TP4 137 tok/s 单流，3090）外推 2×4090 单流 **115-130 tok/s**，**本机未复现**（实测 non-MTP 34.8 / MTP 67.8）。差异来源：(a) Qwen3.5 **hybrid-GDN 架构**——48 层 GDN 的逐 token 状态递推（`S_t=decay·S_{t-1}+outer(k_t,v_t)`，串行、难跨 batch 并行，TP2 还需状态 allreduce），使单流显著低于纯注意力的带宽外推；(b) **sub-optimal W8A8 Block FP8 kernel**（本机 shape 无最优 config，log 有告警）；(c) 参考方配置可能不同。→ **单流不可靠外推，以本机实测为准**；聚合不受此影响（§15.6 已 2.2× 胜出）。
 
@@ -931,16 +932,17 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 1. **聚合（生产容量）**：SGLang 2 卡 **293** ≈ **2.2×** llama 4 卡 **~130**；每卡 **4.5×**（146.5 vs 32.5）。→ **2 卡即可承载 4 卡吞吐**，直接释放 2 卡。
 2. **单流（交互延迟）**：non-MTP 34.8 偏低（TP2 PCIe allreduce + GDN 状态递推 + FP8 内核），MTP 67.8 ≈ llama SLA 72。→ 延迟敏感期切 MTP。
 3. **MTP 取舍**：单流 ×2 但**聚合降 28%**（293→210）——draft 前向在高 batch 下摊薄不划算。→ 吞吐优先用 non-MTP，延迟优先用 MTP。
-4. **256K**：non-MTP 0.90 容纳（实测 52tok）；MTP 0.85 KV 池缩小（draft 权重占 ~1.2G）→ 长上下文走 non-MTP。
+4. **长上下文**：non-MTP 0.90 单请求上限 **~217K**（KV 池 216938，非 256K，见 §15.5 更正注）；MTP 0.85 KV 池更小（draft 权重占 ~1.2G）→ 超长上下文走 non-MTP 且 <217K，>217K 需 llama.cpp 副本。
 5. **质量**：两引擎 spot-check 均通过（小样本，不作质量裁决）；FP8（SGLang）与 iq4_xs GGUF（llama）在本模型上精度相当。
 
 ### 15.7 决策：2 卡 SGLang 生产（替代 4 副本 llama.cpp）
 
 - **采用** SGLang 0.5.10 TP2（GPU6/7）替代 4 副本 llama.cpp（GPU0-3）。
 - **默认配置（吞吐优先，non-MTP）**：
-  `--tp 2 --mem-fraction-static 0.90 --context-length 262144 --kv-cache-dtype fp8_e4m3 --max-running-requests 8 --chunked-prefill-size 8192 --mamba-scheduler-strategy auto --mamba-ssm-dtype float32 --disable-custom-all-reduce`（聚合 293，256K 容纳，单流 34.8）。
+  `--tp 2 --mem-fraction-static 0.90 --context-length 262144 --kv-cache-dtype fp8_e4m3 --max-running-requests 8 --chunked-prefill-size 8192 --mamba-scheduler-strategy auto --mamba-ssm-dtype float32 --disable-custom-all-reduce`（聚合 293，单请求上限 ~217K[非 256K，见 §15.5 更正注]，单流 34.8）。
 - **延迟配置（可选切换，MTP/NEXTN）**：在上面基础上改 `--mamba-scheduler-strategy extra_buffer`、`--mem-fraction-static 0.85`，加 `--speculative-algorithm NEXTN --speculative-num-steps 1 --speculative-eagle-topk 1 --speculative-num-draft-tokens 1`，env `SGLANG_ENABLE_SPEC_V2=1`（单流 67.8，聚合 210）。
-- **迁移步骤**：SGLang 常驻 GPU6/7 → OpenResty `qwen27b-lb` upstream 4→2 → **24h 生产验证**（聚合/单流/256K/质量四轴）→ 通过后释放 GPU0-3。
+- **迁移步骤**：SGLang 常驻 GPU6/7 → OpenResty `qwen27b-lb` upstream 4→2 → **24h 生产验证**（聚合/单流/长上下文/质量四轴）→ 通过后释放 GPU0-3。
+- **迁移执行记录（2026-09-03）**：① SGLang 必须**容器化**到 `qwen27b_default` 网络（`sglang-prod`，GPU6/7，`--shm-size 16g` 解 NCCL，`CUDA_VISIBLE_DEVICES=0,1` 应对容器内 GPU 重编号，容器内 `apt` 装 python3.12——venv 符号链接指向 `/usr/bin/python3.12`）——宿主防火墙（iptables INPUT, root-only）阻断一切容器→宿主流量，容器间通信不受影响；② OpenResty `/` 改静态 `set $backend "sglang-prod:30000"`（变量式走 docker DNS，容器重启 IP 变化自动跟随），原 route.lua 4 副本路由备份 `lb/qwen27b.conf.bak-20260903`，秒级可回退；③ 四轴经 LB 复测（2026-09-03 07:5x）：聚合 **290**(c24) / 单流 **33.8** / 长文 **198.9K** 容纳 / 质量 OK——与 A/B 基线一致；④ 浸泡采样 `soak-sglang.py`（5min 采样健康/延迟/GPU/错误 → `soak-sglang-20260903.log`）；⑤ 容器 `--restart unless-stopped`；⑥ GPU0-3 llama 副本保持运行（热备 + coding-v1 评测），浸泡通过后逐个释放给训练。
 - **回退**：llama.cpp 4 副本镜像 + iq4_xs 权重保留，异常时 OpenResty upstream 2→4 秒级切回。
 
 ### 15.8 训练侧：释放后 6 卡适配 4090（sm_89）
@@ -958,7 +960,7 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 - [ ] **FP8 W8A8 Block kernel per-shape 调优**（消解 "sub-optimal kernel config" 告警，评估 non-MTP 单流 34.8 / c16 per_req 20.1 的提升空间）
 - [ ] **vLLM 是否补测**（装 vLLM + 补 `qwen3_5` 架构支持，第三数据点；当前不阻塞决策）
 - [ ] **GDN state 池 48 并发 sizing**（对照 0xSero TP2=48；本机 max-running 8 未压到并发天花板）
-- [ ] **2 卡 SGLang 迁移后 24h 生产验证**（聚合/单流/256K/质量四轴回填 §15.7）
+- [ ] **2 卡 SGLang 迁移后 24h 浸泡**（2026-09-03 四轴已复测：聚合 290/单流 33.8/长文 198.9K/质量 OK；浸泡采样 `soak-sglang-20260903.log` 进行中，24h 后回填 §15.7 并释放 GPU0-3）
 - [ ] **训练侧 5 卡 LoRA 显存/吞吐基准**（bf16 LoRA + QLoRA 各一组，回填 §15.8）
 - [x] 回填 §14.10：`2×4090 TP2 单流`（实测 34.8/67.8，见 §15.5）+ `vLLM vs SGLang A/B`（vLLM 未部署，见 §15.2）已回填；`GDN state 池 sizing` 待 48 并发压测
 
