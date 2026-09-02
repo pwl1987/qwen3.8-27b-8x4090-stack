@@ -1,0 +1,22 @@
+# 大文件不入库
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# 运行时产物
+__pycache__/
+*.pyc
+*.log
+*.tmp
+*.swp
+*.local
+
+# 数据目录（训练产物/检查点）
+posttrain/train/out/
+eval/rulers/outputs/
+
+# 环境
+.env
+.venv/

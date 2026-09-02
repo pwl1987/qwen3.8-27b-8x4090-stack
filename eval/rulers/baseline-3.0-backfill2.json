@@ -1,0 +1,875 @@
+{
+ "tag": "baseline-3.0-backfill2",
+ "model": "qwen3.8-27b",
+ "endpoint": "http://127.0.0.1:8000/v1",
+ "date": "2026-09-02 08:54:53",
+ "axes": {
+  "gsm8k": {
+   "accuracy": 0.93,
+   "passed": 93,
+   "total": 100,
+   "results": [
+    {
+     "q": "The girls are trying to raise money for a carnival. Kim rais",
+     "gt": "2280",
+     "pred": "2180",
+     "pass": false
+    },
+    {
+     "q": "Kalinda is working on a 360 piece puzzle with her mom. Kalin",
+     "gt": "1",
+     "pred": "1",
+     "pass": true
+    },
+    {
+     "q": "Tom's ship can travel at 10 miles per hour.  He is sailing f",
+     "gt": "5",
+     "pred": "5",
+     "pass": true
+    },
+    {
+     "q": "James decides to buy birthday candles for his 2 sons.  One o",
+     "gt": "12",
+     "pred": "12",
+     "pass": true
+    },
+    {
+     "q": "Mariah’s grandma was teaching her to knit. Mariah used 1/4 o",
+     "gt": "273",
+     "pred": "273",
+     "pass": true
+    },
+    {
+     "q": "While playing with her friends in their school playground, K",
+     "gt": "45",
+     "pred": "45",
+     "pass": true
+    },
+    {
+     "q": "If Ann is 9 years old and her brother is twice her age, how ",
+     "gt": "21",
+     "pred": "21",
+     "pass": true
+    },
+    {
+     "q": "Twenty dozen cups cost $1200 less than the total cost of hal",
+     "gt": "145",
+     "pred": "145",
+     "pass": true
+    },
+    {
+     "q": "Last year there were 50 students enrolled in a calligraphy c",
+     "gt": "60",
+     "pred": "60",
+     "pass": true
+    },
+    {
+     "q": "Rani has ten more crabs than Monic, who has 4 fewer crabs th",
+     "gt": "122",
+     "pred": "122",
+     "pass": true
+    },
+    {
+     "q": "Brian's basement was damp and musty, so he bought a dehumidi",
+     "gt": "29",
+     "pred": "29",
+     "pass": true
+    },
+    {
+     "q": "George, a grade six teacher, ordered 600 burritos for the si",
+     "gt": "80",
+     "pred": "80",
+     "pass": true
+    },
+    {
+     "q": "Jim spends 2 hours watching TV and then decides to go to bed",
+     "gt": "36",
+     "pred": "36",
+     "pass": true
+    },
+    {
+     "q": "Janet buys a brooch for her daughter.  She pays $500 for the",
+     "gt": "1430",
+     "pred": "1430",
+     "pass": true
+    },
+    {
+     "q": "Ducks need to eat 3.5 pounds of insects each week to survive",
+     "gt": "5",
+     "pred": "5",
+     "pass": true
+    },
+    {
+     "q": "Joey has 214 points before his turn in Scrabble. He scores 2",
+     "gt": "5",
+     "pred": "5",
+     "pass": true
+    },
+    {
+     "q": "Sarah went to buy books from the store and spent $300 on the",
+     "gt": "5",
+     "pred": "5",
+     "pass": true
+    },
+    {
+     "q": "Ted starts with $200. He buys 3 books for 16 dollars each an",
+     "gt": "66",
+     "pred": "66",
+     "pass": true
+    },
+    {
+     "q": "Eve had 20 pieces of pomelos. After giving her friend some p",
+     "gt": "15",
+     "pred": "15",
+     "pass": true
+    },
+    {
+     "q": "The Doubtfire sisters are driving home with 7 kittens adopte",
+     "gt": "40",
+     "pred": "40",
+     "pass": true
+    },
+    {
+     "q": "Jen got 3 fish.  They each need $1 worth of food a day.  How",
+     "gt": "93",
+     "pred": "93",
+     "pass": true
+    },
+    {
+     "q": "Elliott is trying to walk 10,000 steps a day. He finished ha",
+     "gt": "2000",
+     "pred": "2000",
+     "pass": true
+    },
+    {
+     "q": "While working at the restaurant, each of the forty customers",
+     "gt": "1520",
+     "pred": "1520",
+     "pass": true
+    },
+    {
+     "q": "On a certain day, the total cost of filling up 20 helium bal",
+     "gt": "11050",
+     "pred": "11050",
+     "pass": true
+    },
+    {
+     "q": "To raise money for their class fund, each of the 30 students",
+     "gt": "90",
+     "pred": "90",
+     "pass": true
+    },
+    {
+     "q": "John decides to get a loan by mortgaging his home.  His hous",
+     "gt": "40000",
+     "pred": "40000",
+     "pass": true
+    },
+    {
+     "q": "Liam and Mitchell own competing lemonade stands across the s",
+     "gt": "21",
+     "pred": "21",
+     "pass": true
+    },
+    {
+     "q": "Melanie is a door-to-door saleswoman. She sold a third of he",
+     "gt": "18",
+     "pred": "18",
+     "pass": true
+    },
+    {
+     "q": "Some people got on a bus at the terminal. At the first bus s",
+     "gt": "14",
+     "pred": "14",
+     "pass": true
+    },
+    {
+     "q": "A bumper car rink has 12 red cars. They have 2 fewer green c",
+     "gt": "23",
+     "pred": "23",
+     "pass": true
+    },
+    {
+     "q": "Students in class 3B are collecting school points for behavi",
+     "gt": "145",
+     "pred": "145",
+     "pass": true
+    },
+    {
+     "q": "If a classroom has 3 times as many girls as they do boys, an",
+     "gt": "123",
+     "pred": "123",
+     "pass": true
+    },
+    {
+     "q": "The area of Billie's rectangular bedroom is 360 square feet.",
+     "gt": "98",
+     "pred": "98",
+     "pass": true
+    },
+    {
+     "q": "Manolo bought five lollipops and four candies that cost $3.2",
+     "gt": "7",
+     "pred": "7.00",
+     "pass": true
+    },
+    {
+     "q": "Three friends spent $20.25 on 3 tickets to the fair. They al",
+     "gt": "34",
+     "pred": null,
+     "pass": false
+    },
+    {
+     "q": "At the local Pick Your Own fruit orchard, you could pick you",
+     "gt": "38",
+     "pred": "38",
+     "pass": true
+    },
+    {
+     "q": "Elaine initially had 20 Pokemon cards. After a month, she co",
+     "gt": "320",
+     "pred": "320",
+     "pass": true
+    },
+    {
+     "q": "In a student council election, candidate A got 20% of the vo",
+     "gt": "50",
+     "pred": "50",
+     "pass": true
+    },
+    {
+     "q": "Gerald and Julia divided $100 in the ratio 3:2. If Gerald sp",
+     "gt": "50",
+     "pred": "50",
+     "pass": true
+    },
+    {
+     "q": "Madeline ate 6 grapes. Her brother wanted to make grape juic",
+     "gt": "84",
+     "pred": "84",
+     "pass": true
+    },
+    {
+     "q": "Elvis has a monthly saving target of $1125. In April, he wan",
+     "gt": "50",
+     "pred": "50",
+     "pass": true
+    },
+    {
+     "q": "Marilyn's first record sold 10 times as many copies as Haral",
+     "gt": "8000",
+     "pred": "8000",
+     "pass": true
+    },
+    {
+     "q": "For the children's day celebration, children are to perform ",
+     "gt": "280",
+     "pred": "280",
+     "pass": true
+    },
+    {
+     "q": "Jeff is 10 years older than his younger sister, Martha. Mart",
+     "gt": "30",
+     "pred": "30",
+     "pass": true
+    },
+    {
+     "q": "Ten stalls have 20 cows each. Mr. Sylas buys 40 cows and div",
+     "gt": "192",
+     "pred": null,
+     "pass": false
+    },
+    {
+     "q": "Henry needs to assemble some toys, specifically 57 cars and ",
+     "gt": "276",
+     "pred": "276",
+     "pass": true
+    },
+    {
+     "q": "Anakin and Locsin went to the beach today. Anakin caught 10 ",
+     "gt": "32",
+     "pred": "32",
+     "pass": true
+    },
+    {
+     "q": "Nik has 200 crayons. He wants to separate them into groups o",
+     "gt": "25",
+     "pred": "25",
+     "pass": true
+    },
+    {
+     "q": "Jamaal is at the gym. He has been using an 8-pound weight. H",
+     "gt": "10",
+     "pred": "10",
+     "pass": true
+    },
+    {
+     "q": "In a family, there are 2 brothers and 3 sisters. All sisters",
+     "gt": "84",
+     "pred": "84",
+     "pass": true
+    },
+    {
+     "q": "The Kennel house keeps 3 German Shepherds and 2 Bulldogs. If",
+     "gt": "147",
+     "pred": "147",
+     "pass": true
+    },
+    {
+     "q": "A class of 50 students has various hobbies. 10 like to bake,",
+     "gt": "25",
+     "pred": "25",
+     "pass": true
+    },
+    {
+     "q": "Bob spends $27000 distributed between 3 schools to buy books",
+     "gt": "1800",
+     "pred": "1800",
+     "pass": true
+    },
+    {
+     "q": "Carol spends 4 hours writing a song, half that much time rec",
+     "gt": "20",
+     "pred": "20",
+     "pass": true
+    },
+    {
+     "q": "Jordan plays video games for 2 hours every day. He also has ",
+     "gt": "140",
+     "pred": "140",
+     "pass": true
+    },
+    {
+     "q": "Lee used to be able to run the 400-meter hurdles two seconds",
+     "gt": "36",
+     "pred": null,
+     "pass": false
+    },
+    {
+     "q": "Becky bought 20 apples for 45 cents each and received a $1 d",
+     "gt": "1",
+     "pred": "1.00",
+     "pass": true
+    },
+    {
+     "q": "Marilyn wants to buy a pair of boots online. On Amazon.com, ",
+     "gt": "1",
+     "pred": "1",
+     "pass": true
+    },
+    {
+     "q": "In a room, there are various toys: 5 red cars, 3 action figu",
+     "gt": "50",
+     "pred": "50",
+     "pass": true
+    },
+    {
+     "q": "Micheal loves riding a bike. He rode it at least 5 times a w",
+     "gt": "860",
+     "pred": "860",
+     "pass": true
+    },
+    {
+     "q": "Rita hand-picks Junebugs off of her plants every summer.  On",
+     "gt": "60",
+     "pred": "60",
+     "pass": true
+    },
+    {
+     "q": "Randy has 9 oatmeal cookies, 4 chocolate chip cookies, and 5",
+     "gt": "23",
+     "pred": "23",
+     "pass": true
+    },
+    {
+     "q": "A tomato vendor decides to switch who he buys his tomatoes f",
+     "gt": "350",
+     "pred": "350",
+     "pass": true
+    },
+    {
+     "q": "Robert wants to buy a bookshelf and a sofa and has received ",
+     "gt": "100",
+     "pred": "100",
+     "pass": true
+    },
+    {
+     "q": "A bag has a 5% discount. If it is marked $140, how much will",
+     "gt": "133",
+     "pred": "133",
+     "pass": true
+    },
+    {
+     "q": "Hannah has a mental breakdown while studying for finals and ",
+     "gt": "112",
+     "pred": "112",
+     "pass": true
+    },
+    {
+     "q": "Indras has 6 letters in her name. Her sister's name has 4 mo",
+     "gt": "13",
+     "pred": "13",
+     "pass": true
+    },
+    {
+     "q": "Elise is learning to write and decides to keep re-writing th",
+     "gt": "130",
+     "pred": "130",
+     "pass": true
+    },
+    {
+     "q": "Johnny is picking up the toys on the floor of his room.  He'",
+     "gt": "2125",
+     "pred": "2125",
+     "pass": true
+    },
+    {
+     "q": "Brendan has a bag of marbles with 10 inside. He tripped over",
+     "gt": "7",
+     "pred": "7",
+     "pass": true
+    },
+    {
+     "q": "Josh runs a car shop and services 3 cars a day.  He is open ",
+     "gt": "120",
+     "pred": "120",
+     "pass": true
+    },
+    {
+     "q": "Peyton scheduled after-work activities of a one hour yoga cl",
+     "gt": "8",
+     "pred": "8",
+     "pass": true
+    },
+    {
+     "q": "Tony is painting a room with four walls. The north and south",
+     "gt": "144",
+     "pred": "144",
+     "pass": true
+    },
+    {
+     "q": "Nick, Richard, Jason and DJ each have paintball guns. DJ has",
+     "gt": "6",
+     "pred": "6",
+     "pass": true
+    },
+    {
+     "q": "A bakery has 40 less than seven times as many loaves of brea",
+     "gt": "450",
+     "pred": "450",
+     "pass": true
+    },
+    {
+     "q": "Mike decides he wants to replace his movie collection with d",
+     "gt": "4400",
+     "pred": "4400",
+     "pass": true
+    },
+    {
+     "q": "A marketing company pays its employees on a commission-based",
+     "gt": "450",
+     "pred": null,
+     "pass": false
+    },
+    {
+     "q": "Aaron and Vanessa were relay race partners on a running team",
+     "gt": "64",
+     "pred": "64",
+     "pass": true
+    },
+    {
+     "q": "Gomer ate 5 less than 23 scoops of mashed potatoes.  If it t",
+     "gt": "27",
+     "pred": "27",
+     "pass": true
+    },
+    {
+     "q": "Beatrice bought ten packets of crayons for her Art class. Si",
+     "gt": "112",
+     "pred": "112",
+     "pass": true
+    },
+    {
+     "q": "John decides to take a cooking class.  The class meets 4 tim",
+     "gt": "32",
+     "pred": "32",
+     "pass": true
+    },
+    {
+     "q": "Jamal's phone can hold 6 times more photographs than can Bri",
+     "gt": "6",
+     "pred": "6",
+     "pass": true
+    },
+    {
+     "q": "Mary has 6 jars of sprinkles in her pantry. Each jar of spri",
+     "gt": "4",
+     "pred": "4",
+     "pass": true
+    },
+    {
+     "q": "Alisa biked 12 miles per hour for 4.5 hours. Stanley biked a",
+     "gt": "79",
+     "pred": "79",
+     "pass": true
+    },
+    {
+     "q": "Hunter counted 50 cars packed in their school parking lot wh",
+     "gt": "35",
+     "pred": "35",
+     "pass": true
+    },
+    {
+     "q": "Mark was unwell for 3 months, during which he lost 10 pounds",
+     "gt": "100",
+     "pred": "100",
+     "pass": true
+    },
+    {
+     "q": "Brian's friend Bobby has 5 fewer than 3 times as many video ",
+     "gt": "40",
+     "pred": "40",
+     "pass": true
+    },
+    {
+     "q": "Prince Thaddeus slew 100 dragons with his mighty sword, whil",
+     "gt": "30",
+     "pred": "30",
+     "pass": true
+    },
+    {
+     "q": "Abraham owns 80 square meters of unused land. He sold half o",
+     "gt": "170",
+     "pred": "140",
+     "pass": false
+    },
+    {
+     "q": "Steve is 60 years old. His wife is 4 years older than him. T",
+     "gt": "29",
+     "pred": "29",
+     "pass": true
+    },
+    {
+     "q": "Ray had 25 lollipops. He kept 5 lollipops and shared the rem",
+     "gt": "5",
+     "pred": "5",
+     "pass": true
+    },
+    {
+     "q": "Teresa sells large stuffed animals for three times the price",
+     "gt": "12",
+     "pred": "12",
+     "pass": true
+    },
+    {
+     "q": "In one year, the number of students on campus doubles at the",
+     "gt": "310",
+     "pred": "310",
+     "pass": true
+    },
+    {
+     "q": "Mark's car breaks down and he needs to get a new radiator.  ",
+     "gt": "230",
+     "pred": "230",
+     "pass": true
+    },
+    {
+     "q": "Craig and his brother take turns spelling out the longest le",
+     "gt": "650",
+     "pred": "650",
+     "pass": true
+    },
+    {
+     "q": "Susan earns $5 every 10 minutes for an online task she does.",
+     "gt": "75",
+     "pred": "75",
+     "pass": true
+    },
+    {
+     "q": "Verna loves to eat fruit. She bought three apples at $1.50 e",
+     "gt": "7",
+     "pred": "7.00",
+     "pass": true
+    },
+    {
+     "q": "Frederick is making popsicles to sell and to save money he i",
+     "gt": "1600",
+     "pred": null,
+     "pass": false
+    },
+    {
+     "q": "A jellyfish tank has numerous jellyfish in it. A fifth of th",
+     "gt": "90",
+     "pred": "90",
+     "pass": true
+    },
+    {
+     "q": "Emma can make and upload 72 vlogs per month. But she was onl",
+     "gt": "18",
+     "pred": "18",
+     "pass": true
+    }
+   ],
+   "seconds": 828.6
+  },
+  "ifeval": {
+   "accuracy": 0.56,
+   "passed": 28,
+   "judged": 50,
+   "skipped": 0,
+   "results": [
+    {
+     "key": 1620,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1132,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2465,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2341,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2247,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1759,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1571,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1481,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 3280,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1162,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1153,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 152,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 2230,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2292,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 3691,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1139,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2107,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 3263,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 2243,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 340,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2471,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 1021,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1883,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 2817,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1857,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2216,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 2801,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 1518,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 3035,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 1546,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 2905,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 2829,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 2416,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 1237,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 3434,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 1659,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 301,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1418,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2577,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 2912,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 2070,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1372,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 1246,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2268,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2549,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 142,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 1566,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 3415,
+     "pass": true,
+     "skipped": false
+    },
+    {
+     "key": 2921,
+     "pass": false,
+     "skipped": false
+    },
+    {
+     "key": 1897,
+     "pass": false,
+     "skipped": false
+    }
+   ],
+   "seconds": 992.0
+  }
+ }
+}

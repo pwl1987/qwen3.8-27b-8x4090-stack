@@ -1,0 +1,831 @@
+{
+ "tag": "baseline-3.0-backfill",
+ "model": "qwen3.8-27b",
+ "endpoint": "http://127.0.0.1:8000/v1",
+ "date": "2026-09-02 08:23:47",
+ "axes": {
+  "xfc": {
+   "accuracy": 0.635,
+   "passed": 127,
+   "total": 200,
+   "results": [
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "parse"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "parse"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "HTTPConnectionPool(host='127.0.0.1', por"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "HTTPConnectionPool(host='127.0.0.1', por"
+    },
+    {
+     "pass": false,
+     "why": "parse"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "parse"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "HTTPConnectionPool(host='127.0.0.1', por"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "parse"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "parse"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "HTTPConnectionPool(host='127.0.0.1', por"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "parse"
+    },
+    {
+     "pass": false,
+     "why": "HTTPConnectionPool(host='127.0.0.1', por"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "HTTPConnectionPool(host='127.0.0.1', por"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "HTTPConnectionPool(host='127.0.0.1', por"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    },
+    {
+     "pass": false,
+     "why": "parse"
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": true,
+     "why": ""
+    },
+    {
+     "pass": false,
+     "why": "mismatch"
+    }
+   ],
+   "seconds": 1561.0
+  },
+  "gsm8k": {
+   "accuracy": 0.0,
+   "passed": 0,
+   "total": 0,
+   "results": [],
+   "seconds": 0.3
+  },
+  "ifeval": {
+   "accuracy": 0.0,
+   "passed": 0,
+   "judged": 0,
+   "skipped": 0,
+   "results": [],
+   "seconds": 0.0
+  }
+ }
+}

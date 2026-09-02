@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPU 服务器监控 · Qwen3.8-27B</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --bd:#30363d; --tx:#e6edf3; --dim:#8b949e;
+          --ok:#3fb950; --warn:#d29922; --hot:#f85149; --acc:#58a6ff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--tx); font:14px/1.5 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif; padding:20px; }
+  .top { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; }
+  h1 { font-size:18px; margin-bottom:4px; }
+  .sub { color:var(--dim); font-size:12px; margin-bottom:12px; }
+  .ctrl { display:flex; gap:6px; align-items:center; }
+  .ctrl button, .ctrl select { background:var(--card); color:var(--tx); border:1px solid var(--bd);
+      border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; }
+  .ctrl button:hover, .ctrl select:hover { border-color:var(--acc); }
+  .alerts { border:1px solid var(--hot); background:rgba(248,81,73,.1); color:var(--tx); border-radius:8px;
+      padding:8px 12px; margin-bottom:12px; font-size:13px; }
+  .alerts.warn { border-color:var(--warn); background:rgba(210,153,34,.1); }
+  .alerts b { margin-right:8px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:10px; margin-bottom:14px; }
+  .kpi { background:var(--card); border:1px solid var(--bd); border-radius:8px; padding:12px; }
+  .kpi .k { color:var(--dim); font-size:12px; }
+  .kpi .v { font-size:22px; font-weight:700; margin:2px 0; font-variant-numeric:tabular-nums; }
+  .kpi .s { color:var(--dim); font-size:11px; }
+  canvas { display:block; }
+  .kpi canvas { width:100%; height:34px; margin-top:4px; }
+  .panel { background:var(--card); border:1px solid var(--bd); border-radius:8px; padding:14px; margin-bottom:14px; position:relative; }
+  .panel .title { font-weight:700; margin-bottom:10px; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .tab { padding:3px 12px; border:1px solid var(--bd); border-radius:12px; font-size:12px; color:var(--dim); cursor:pointer; user-select:none; }
+  .tab:hover { color:var(--tx); }
+  .tab.on { color:var(--tx); border-color:var(--acc); background:rgba(88,166,255,.12); }
+  #chart { width:100%; height:220px; cursor:crosshair; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:6px; font-size:12px; color:var(--dim); }
+  .legend i { display:inline-block; width:14px; height:3px; border-radius:2px; margin-right:5px; vertical-align:middle; }
+  .tip { position:absolute; display:none; pointer-events:none; background:rgba(13,17,23,.95); border:1px solid var(--bd);
+      padding:8px 10px; border-radius:6px; font-size:12px; white-space:nowrap; z-index:9; line-height:1.7; }
+  .reps { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
+  .rep { border:1px solid var(--bd); border-radius:6px; padding:10px; }
+  .rep .rn { font-weight:600; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; background:var(--ok); }
+  .dot.down { background:var(--hot); }
+  .rrow { display:flex; justify-content:space-between; font-size:12px; color:var(--dim); margin-top:3px; }
+  .rrow b { color:var(--tx); font-variant-numeric:tabular-nums; }
+  .slotbar { display:flex; gap:4px; margin-top:6px; }
+  .slotbar i { flex:1; height:6px; border-radius:3px; background:#21262d; }
+  .slotbar i.on { background:var(--acc); }
+  .lbgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-bottom:10px; }
+  .lbk { border:1px solid var(--bd); border-radius:6px; padding:8px 10px; font-size:12px; color:var(--dim); }
+  .lbk b { display:block; font-size:18px; color:var(--tx); font-variant-numeric:tabular-nums; }
+  .lbbar { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--dim); margin-top:5px; }
+  .lbbar span { width:56px; }
+  .lbbar .tr { flex:1; height:8px; background:#21262d; border-radius:4px; overflow:hidden; }
+  .lbbar .tr i { display:block; height:100%; background:var(--acc); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:12px; }
+  .gpu { background:var(--card); border:1px solid var(--bd); border-radius:8px; padding:14px; }
+  .gpu .head { display:flex; justify-content:space-between; margin-bottom:8px; }
+  .gpu .idx { font-weight:700; font-size:15px; }
+  .gpu .name { color:var(--dim); font-size:11px; }
+  .gpu canvas { width:100%; height:30px; margin:2px 0 6px; }
+  .bar { height:8px; background:#21262d; border-radius:4px; overflow:hidden; margin:4px 0 2px; }
+  .bar i { display:block; height:100%; border-radius:4px; transition:width .6s; }
+  .row { display:flex; justify-content:space-between; font-size:12px; color:var(--dim); }
+  .row b { color:var(--tx); font-variant-numeric:tabular-nums; }
+  .foot { color:var(--dim); font-size:11px; margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div>
+    <h1>GPU 服务器监控 <small style="font-size:11px;color:var(--dim)">v3</small> <span id="pill" style="font-size:12px;font-weight:600;vertical-align:middle"></span></h1>
+    <div class="sub" id="meta">加载中…</div>
+  </div>
+  <div class="ctrl">
+    <button id="btnPause">暂停</button>
+    <select id="selInterval">
+      <option value="2000" selected>2s 刷新</option>
+      <option value="5000">5s 刷新</option>
+      <option value="10000">10s 刷新</option>
+    </select>
+    <button id="btnCsv">导出 CSV</button>
+  </div>
+</div>
+
+<div class="alerts" id="alerts" style="display:none"></div>
+
+<div class="cards" id="kpis"></div>
+
+<div class="panel" id="chartPanel">
+  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+    <div class="title">历史趋势 <small style="color:var(--dim);font-weight:400" id="histMeta"></small></div>
+    <div class="tabs" id="rangeTabs"></div>
+  </div>
+  <div class="tabs" id="metricTabs"></div>
+  <canvas id="chart"></canvas>
+  <div class="legend" id="legend"></div>
+  <div class="tip" id="tip"></div>
+</div>
+
+<div class="panel" id="lbPanel" style="display:none">
+  <div class="title">LB 路由统计（OpenResty 会话粘滞 · 自 LB 启动累计）</div>
+  <div class="lbgrid" id="lbKpis"></div>
+  <div id="lbBars"></div>
+</div>
+
+<div class="panel" id="svcPanel" style="display:none">
+  <div class="title">其他推理服务（compose 环境变量 MON_SERVICES 配置探活地址）</div>
+  <div id="svcRows"></div>
+</div>
+
+<div class="panel">
+  <div class="title">Qwen3.8-27B 推理副本（4×llama.cpp + OpenResty 动态LB，:8000）</div>
+  <div class="reps" id="reps"></div>
+</div>
+
+<div class="grid" id="gpus"></div>
+<div class="foot">数据 2s 自动刷新 · KPI 曲线 5 分钟 · 历史趋势 10s 粒度保留 24h（重启不丢） · GPU0-3=模型副本 · GPU4-7=空闲预留 · TTFT 探测经 LB :8000（热=固定 prompt 走缓存 / 冷=唯一 prompt）</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const HIST = {gen:[], pre:[], conc:[], qps:[], th:[]}, MAXPTS = 150;   // 2s 实时 sparkline(5 分钟)
+let paused = false, timer = null, lastData = null;
+let hist = [], histTs = 0;                                             // 服务端 24h 历史
+let range = 300, metric = 'tp';
+const PALETTE = ['#58a6ff','#3fb950','#d29922','#f85149','#bc8cff','#39c5cf','#ff9bce','#7ee787'];
+const RANGES = [['5分钟',300],['1小时',3600],['6小时',21600],['24小时',86400]];
+const METRICS = {
+  tp:   [['gen','生成 tok/s','#3fb950',0],['pre','prefill tok/s','#58a6ff',1]],
+  cc:   [['conc','并发路数','#d29922',0],['def','排队路数','#f85149',0]],
+  rq:   [['qps','QPS','#58a6ff',0],['th','TTFT热 s','#3fb950',1],['tc','TTFT冷 s','#d29922',1]],
+  gpu:  PALETTE.map((c,i)=>[['g',i],'GPU'+i+' 利用率%',c,0]),
+  sys:  [['cpu','宿主 CPU%','#58a6ff',0],['mem','内存%','#d29922',0]],
+};
+const fmtT = ts => new Date(ts*1000).toLocaleTimeString('zh-CN',{hour12:false});
+
+function spark(cv, data, color, cssH = 34){
+  const c = cv.getContext('2d'), w = cv.width = cv.offsetWidth*2, h = cv.height = cssH*2;
+  c.clearRect(0,0,w,h);
+  if (!data || data.length < 2) return;
+  const mx = Math.max(1, ...data.filter(v=>v!=null));
+  c.strokeStyle = color; c.lineWidth = 2.5; c.beginPath();
+  let started = false;
+  data.forEach((v,i) => {
+    if (v == null) { started = false; return; }
+    const x = w*i/(data.length-1), y = h-4-(h-8)*v/mx;
+    started ? c.lineTo(x,y) : (c.moveTo(x,y), started = true);
+  });
+  c.stroke();
+}
+function color(pct){ return pct>85 ? 'var(--hot)' : pct>60 ? 'var(--warn)' : 'var(--ok)'; }
+function kpi(k, v, s, sparkId){
+  let sc = '';
+  if (sparkId) sc = `<canvas id="${sparkId}"></canvas>`;
+  return `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div>${sc}</div>`;
+}
+
+// ---------- 告警 ----------
+let hotTtftBadStreak = 0, prevReqTotal = null;
+function calcAlerts(d){
+  const a = [];
+  for (const [k,v] of Object.entries(d.reps)) if (!v.ok) a.push(['hot', `副本 ${k} 不可达`]);
+  for (const g of d.gpus || []) {
+    if (g.temperature_gpu >= 83) a.push(['hot', `GPU${g.index} ${g.temperature_gpu}°C（83°C 降频线）`]);
+    else if (g.temperature_gpu >= 78) a.push(['warn', `GPU${g.index} ${g.temperature_gpu}°C`]);
+    if (100*g.memory_used/g.memory_total >= 97) a.push(['warn', `GPU${g.index} 显存 ${(100*g.memory_used/g.memory_total).toFixed(0)}%`]);
+  }
+  if (d.total.deferred >= 4) a.push(['warn', `排队 ${d.total.deferred} 路`]);
+  // 热TTFT 需连续 2 次超 1s 才告警(LB/副本重启后偶发单次抖动不误报)
+  if (d.ttft.hot != null && d.ttft.hot > 1) { if (++hotTtftBadStreak >= 2) a.push(['warn', `热TTFT ${d.ttft.hot}s（前缀缓存疑似失效）`]); }
+  else hotTtftBadStreak = 0;
+  if (d.total.gen_tps > 0 && d.total.mtp_acc && d.total.mtp_acc < 55) a.push(['warn', `MTP 接受率 ${d.total.mtp_acc}%`]);
+  for (const s of d.services || []) if (!s.ok) a.push(['hot', `服务 ${s.name} 不可达`]);
+  // 副本重启: id_task 计数器归零 → 累计请求数骤降
+  if (prevReqTotal != null && d.total.req_total < prevReqTotal) a.push(['warn', '检测到副本重启（请求计数已归零）']);
+  prevReqTotal = d.total.req_total;
+  return a;
+}
+function renderAlerts(d){
+  const a = calcAlerts(d), el = $('alerts'), pill = $('pill');
+  const hot = a.some(x => x[0] === 'hot');
+  pill.innerHTML = a.length
+    ? `<span style="color:${hot?'var(--hot)':'var(--warn)'}">● ${hot?'异常':'注意'} ${a.length}</span>`
+    : '<span style="color:var(--ok)">● 正常</span>';
+  if (!a.length) { el.style.display = 'none'; return; }
+  el.style.display = ''; el.className = 'alerts' + (hot ? '' : ' warn');
+  el.innerHTML = `<b>${hot?'⚠ 严重':'⚠ 注意'} (${a.length})</b>` + a.map(x=>x[1]).join(' · ');
+}
+
+// ---------- 主图表 ----------
+const PAD = {l:46, r:46, t:10, b:18};
+let CH = null;   // {pts, t0, w, h} 供 tooltip 定位
+
+function seriesVal(p, s){
+  const k = s[0];
+  if (k === 'g') return (p.g && p.g[s[1]] && p.g[s[1]][0] != null) ? p.g[s[1]][0] : null;
+  return p[k];
+}
+function drawChart(){
+  const cv = $('chart'), dpr = 2;
+  const w = cv.offsetWidth, h = cv.offsetHeight;
+  if (!w) return;
+  cv.width = w*dpr; cv.height = h*dpr;
+  const c = cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,w,h);
+  const now = Date.now()/1000, t0 = now - range;
+  let pts = hist.filter(p => p.ts >= t0);
+  if (pts.length > 360) { const st = Math.ceil(pts.length/360); pts = pts.filter((_,i)=>i%st===0); }
+  $('histMeta').textContent = `· ${pts.length} 点 · 更新于 ${histTs?new Date(histTs).toLocaleTimeString('zh-CN',{hour12:false}):'—'}`;
+  const series = METRICS[metric];
+  $('legend').innerHTML = series.map(s =>
+    `<span><i style="background:${s[2]}"></i>${s[1]}（${s[3] === 1 ? '右轴' : '左轴'}）</span>`).join('');
+  if (pts.length < 2) return;
+  CH = {pts, t0, w, h};
+
+  // 轴范围
+  const mm = [[0,0],[0,0]];
+  for (const ax of [0,1]) {
+    let mn = Infinity, mx = -Infinity;
+    for (const p of pts) for (const s of series) if (s[3]===ax) {
+      const v = seriesVal(p, s);
+      if (v != null) { if (v<mn) mn=v; if (v>mx) mx=v; }
+    }
+    if (mn === Infinity) { mn = 0; mx = 1; }
+    if (mx === mn) mx = mn + 1;
+    mm[ax] = [Math.min(0,mn), mx*1.12];
+  }
+  const X = ts => PAD.l + (ts-t0)/range*(w-PAD.l-PAD.r);
+  const Y = (v,ax) => PAD.t + (1-(v-mm[ax][0])/(mm[ax][1]-mm[ax][0]))*(h-PAD.t-PAD.b);
+
+  // 网格 + 轴标签
+  c.font = '10px sans-serif'; c.fillStyle = '#8b949e'; c.strokeStyle = '#21262d'; c.lineWidth = 1;
+  for (let i=0;i<=3;i++) {
+    const y = PAD.t + i*(h-PAD.t-PAD.b)/3;
+    c.beginPath(); c.moveTo(PAD.l,y); c.lineTo(w-PAD.r,y); c.stroke();
+    const v0 = mm[0][1] - i*(mm[0][1]-mm[0][0])/3, v1 = mm[1][1] - i*(mm[1][1]-mm[1][0])/3;
+    c.textAlign = 'right'; c.fillText(fmtNum(v0), PAD.l-5, y+3);
+    c.textAlign = 'left';  c.fillText(fmtNum(v1), w-PAD.r+5, y+3);
+  }
+  for (let i=0;i<=4;i++) {
+    const ts = t0 + i*range/4, x = X(ts);
+    c.textAlign = 'center'; c.fillStyle = '#8b949e';
+    c.fillText(range<=300 ? fmtT(ts) : fmtT(ts).slice(0,5), x, h-4);
+  }
+
+  // 折线(首序列加面积填充)
+  series.forEach((s, si) => {
+    c.strokeStyle = s[2]; c.lineWidth = si===0 ? 2 : 1.5;
+    if (si === 0) {
+      c.beginPath(); let st = false, firstY = null, lastY = null;
+      pts.forEach(p => {
+        const v = seriesVal(p, s);
+        if (v == null) { st = false; return; }
+        const x = X(p.ts), y = Y(v, s[3]);
+        if (!st) { c.moveTo(x,y); st = true; firstY = y; } else c.lineTo(x,y);
+        lastY = y;
+      });
+      if (firstY != null) {
+        c.lineTo(X(pts[pts.length-1].ts), h-PAD.b); c.lineTo(X(pts[0].ts), h-PAD.b); c.closePath();
+        c.fillStyle = s[2]+'22'; c.fill();
+      }
+    }
+    c.beginPath(); let st = false;
+    pts.forEach(p => {
+      const v = seriesVal(p, s);
+      if (v == null) { st = false; return; }
+      const x = X(p.ts), y = Y(v, s[3]);
+      st ? c.lineTo(x,y) : (c.moveTo(x,y), st = true);
+    });
+    c.stroke();
+  });
+}
+function fmtNum(v){
+  if (v >= 10000) return (v/1000).toFixed(0)+'k';
+  if (v >= 100) return v.toFixed(0);
+  if (v >= 10) return v.toFixed(1);
+  return v.toFixed(2);
+}
+
+// tooltip
+$('chart').addEventListener('mousemove', e => {
+  if (!CH) return;
+  const r = $('chart').getBoundingClientRect();
+  const x = e.clientX - r.left;
+  if (x < PAD.l || x > r.width - PAD.r) { $('tip').style.display = 'none'; return; }
+  const ts = CH.t0 + (x-PAD.l)/(CH.w-PAD.l-PAD.r)*range;
+  let best = CH.pts[0], bd = Infinity;
+  for (const p of CH.pts) { const d = Math.abs(p.ts-ts); if (d < bd) { bd = d; best = p; } }
+  const series = METRICS[metric];
+  let html = `<div style="color:#8b949e">${fmtT(best.ts)}</div>`;
+  for (const s of series) {
+    const v = seriesVal(best, s);
+    html += `<div><span style="color:${s[2]}">●</span> ${s[1]}: <b>${v==null?'—':fmtNum(v)}</b></div>`;
+  }
+  const tip = $('tip');
+  tip.innerHTML = html; tip.style.display = 'block';
+  const pr = $('chartPanel').getBoundingClientRect();
+  let tx = e.clientX - pr.left + 14;
+  if (tx + 170 > pr.width) tx = e.clientX - pr.left - 180;
+  tip.style.left = tx + 'px';
+  tip.style.top = (e.clientY - pr.top - 10) + 'px';
+});
+$('chart').addEventListener('mouseleave', () => $('tip').style.display = 'none');
+
+// ---------- tabs ----------
+function renderTabs(){
+  $('rangeTabs').innerHTML = RANGES.map(([n,v])=>`<span class="tab${v===range?' on':''}" data-r="${v}">${n}</span>`).join('');
+  $('metricTabs').innerHTML = [['tp','吞吐'],['cc','并发 · 排队'],['rq','请求 · 首字延迟'],['gpu','GPU 利用率'],['sys','宿主系统']]
+    .map(([k,n])=>`<span class="tab${k===metric?' on':''}" data-m="${k}">${n}</span>`).join('');
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if (!t) return;
+  if (t.dataset.r) { range = +t.dataset.r; renderTabs(); drawChart(); }
+  if (t.dataset.m) { metric = t.dataset.m; renderTabs(); drawChart(); }
+});
+window.addEventListener('resize', drawChart);
+
+function fetchHist(){
+  fetch('/hist/history.json').then(r=>r.json()).then(j=>{
+    if (j && j.points) { hist = j.points; histTs = Date.now(); drawChart(); }
+  }).catch(()=>{});
+}
+
+// ---------- CSV ----------
+$('btnCsv').addEventListener('click', () => {
+  const t0 = Date.now()/1000 - range;
+  const pts = hist.filter(p => p.ts >= t0);
+  if (!pts.length) { alert('当前范围暂无历史数据'); return; }
+  const head = ['time','gen_tps','pre_tps','conc','deferred','cache%','mtp%','qps','cpu%','mem%','ttft_hot_s','ttft_cold_s',
+                ...Array.from({length:8},(_,i)=>'gpu'+i+'_util%')];
+  const rows = pts.map(p => [fmtT(p.ts), p.gen, p.pre, p.conc, p.def, p.cache, p.mtp, p.qps, p.cpu, p.mem, p.th, p.tc,
+                ...Array.from({length:8},(_,i)=>p.g&&p.g[i]?p.g[i][0]:'')].join(','));
+  const blob = new Blob(['\ufeff'+[head.join(','),...rows].join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mon-${range}s-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+// ---------- 控制 ----------
+$('btnPause').addEventListener('click', () => {
+  paused = !paused;
+  $('btnPause').textContent = paused ? '继续' : '暂停';
+  if (!paused) tick();                       // 恢复立即刷新, 不等下个周期
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && !paused) tick();   // 切回标签页立即刷新
+});
+$('selInterval').addEventListener('change', e => {
+  clearInterval(timer);
+  timer = setInterval(tick, +e.target.value);
+});
+
+// ---------- 主刷新 ----------
+function ago(ts){ return ts ? `${Math.round((Date.now()/1000-ts))}s 前` : '—'; }
+
+async function tick(){
+  if (paused || document.hidden) return;
+  try {
+    const d = lastData = await (await fetch('/data.json')).json();
+    $('meta').textContent = `更新 ${new Date().toLocaleTimeString('zh-CN',{hour12:false})} · ${d.gpus.length} GPU · 系统 CPU ${d.sys.cpu_pct}% · 内存 ${(d.sys.mem_used/1073741824).toFixed(0)}/${(d.sys.mem_total/1073741824).toFixed(0)}G · load ${d.sys.load1}`;
+
+    renderAlerts(d);
+    HIST.gen.push(d.total.gen_tps); HIST.pre.push(d.total.pre_tps); HIST.conc.push(d.total.processing);
+    HIST.qps.push(d.total.qps); HIST.th.push(d.ttft.hot);
+    for (const a of Object.values(HIST)) if (a.length > MAXPTS) a.shift();
+
+    const perStream = d.total.processing > 0 ? (d.total.gen_tps/d.total.processing).toFixed(1) : '—';
+    const th = d.ttft.hot != null ? d.ttft.hot + ' <small style="font-size:12px">s</small>' : '—';
+    const tc = d.ttft.cold != null ? d.ttft.cold + ' <small style="font-size:12px">s</small>' : '—';
+    $('kpis').innerHTML =
+      kpi('总生成吞吐', d.total.gen_tps + ' <small style="font-size:12px">tok/s</small>', '全部副本合计', 'sgen') +
+      kpi('prefill 吞吐', (d.total.pre_tps/1000).toFixed(1) + 'K <small style="font-size:12px">tok/s</small>', '', 'spre') +
+      kpi('当前并发', d.total.processing + ' 路', d.total.deferred ? `排队 ${d.total.deferred}` : '无排队', 'sconc') +
+      kpi('每路平均速度', perStream + ' <small style="font-size:12px">tok/s</small>', '生成吞吐/并发路数') +
+      kpi('实时 QPS', (d.total.qps_ema != null ? d.total.qps_ema : d.total.qps).toFixed(1), '经 LB 完成请求速率(平滑)', 'sqps') +
+      kpi('累计请求', d.total.req_total.toLocaleString(), '副本启动以来受理总数') +
+      kpi('首字延迟 · 热', th, '固定 prompt 缓存命中 · ' + ago(d.ttft.hot_ts), 'sth') +
+      kpi('首字延迟 · 冷', tc, '唯一短 prompt · ' + ago(d.ttft.cold_ts)) +
+      kpi('前缀缓存命中', d.total.cache_hit + '%', 'prompt token 复用比例') +
+      kpi('MTP 接受率', d.total.mtp_acc + '%', '投机解码草稿采纳比');
+
+    if (document.getElementById('sgen')) {
+      spark($('sgen'), HIST.gen, '#3fb950');
+      spark($('spre'), HIST.pre, '#58a6ff');
+      spark($('sconc'), HIST.conc, '#d29922');
+      spark($('sqps'), HIST.qps, '#bc8cff');
+      spark($('sth'), HIST.th, '#39c5cf');
+    }
+
+    // LB 面板
+    const lp = $('lbPanel');
+    if (d.lb && d.lb.sticky_hit != null) {
+      lp.style.display = '';
+      const tot = (d.lb.sticky_hit||0) + (d.lb.drift||0) + (d.lb.new_sess||0);
+      const pct = n => tot ? (100*n/tot).toFixed(1)+'%' : '—';
+      $('lbKpis').innerHTML =
+        `<div class="lbk">总路由请求<b>${tot.toLocaleString()}</b></div>` +
+        `<div class="lbk">粘滞命中（缓存友好）<b>${(d.lb.sticky_hit||0).toLocaleString()} · ${pct(d.lb.sticky_hit||0)}</b></div>` +
+        `<div class="lbk">满载漂移<b>${(d.lb.drift||0).toLocaleString()} · ${pct(d.lb.drift||0)}</b></div>` +
+        `<div class="lbk">新会话接入<b>${(d.lb.new_sess||0).toLocaleString()} · ${pct(d.lb.new_sess||0)}</b></div>`;
+      const sels = [['llama','qwen27b(GPU0)'],['r1','r1(GPU1)'],['r2','r2(GPU2)'],['r3','r3(GPU3)']];
+      $('lbBars').innerHTML = sels.map(([k,n]) => {
+        const v = d.lb['sel_'+k]||0;
+        return `<div class="lbbar"><span>${n}</span><div class="tr"><i style="width:${tot?100*v/tot:0}%"></i></div><b style="color:var(--tx)">${v.toLocaleString()} · ${pct(v)}</b></div>`;
+      }).join('');
+    } else lp.style.display = 'none';
+
+    const names = {llama:'qwen27b (GPU0)', r1:'r1 (GPU1)', r2:'r2 (GPU2)', r3:'r3 (GPU3)'};
+    $('reps').innerHTML = Object.entries(d.reps).map(([k,v]) => {
+      if (!v.ok) return `<div class="rep"><span class="dot down"></span><span class="rn">${names[k]||k}</span>
+        <div style="color:var(--hot);font-size:12px;margin-top:4px">不可达</div></div>`;
+      const busy = v.slots.filter(s=>s.busy).length;
+      return `<div class="rep">
+        <div><span class="dot"></span><span class="rn">${names[k]||k}</span></div>
+        <div class="rrow"><span>生成</span><b>${v.gen_tps} tok/s</b></div>
+        <div class="rrow"><span>prefill</span><b>${(v.pre_tps/1000).toFixed(1)}K tok/s</b></div>
+        <div class="rrow"><span>并发${v.deferred?` (+${v.deferred}排队)`:''}</span><b>${v.processing}路 · slot ${busy}/${v.slots.length}</b></div>
+        <div class="rrow"><span>请求</span><b>${v.qps!=null?v.qps.toFixed(1)+' QPS':'—'} · 累计 ${v.req_total.toLocaleString()}</b></div>
+        <div class="rrow"><span>缓存命中 / MTP</span><b>${v.cache_hit}% / ${v.mtp_acc}%</b></div>
+        <div class="rrow"><span>每路速度</span><b>${v.stream_tps && v.stream_tps.length ? v.stream_tps.map(x=>x.toFixed(0)).join(' / ')+' tok/s' : '—'}</b></div>
+        <div class="slotbar">${v.slots.map(s=>
+          `<i class="${s.busy?'on':''}" title="${s.busy?'忙碌':'空闲'} · prompt ${s.prompt_tok} tok · 缓存命中 ${s.cache_tok} tok · 已生成 ${s.n_decoded} tok"></i>`).join('')}</div>
+      </div>`;
+    }).join('');
+
+    $('gpus').innerHTML = d.gpus.map(g => {
+      const mem = 100*g.memory_used/g.memory_total, util = g.utilization_gpu;
+      const ps = (d.procs||[]).filter(p=>p.gpu===g.index);
+      const phtml = ps.length ? `<div class="row" style="margin-top:4px"><span>进程 ${ps.length}</span><b style="font-size:11px">${ps.map(p=>`${p.name} ${(p.mem/1024).toFixed(1)}G`).join('<br>')}</b></div>` : '';
+      return `<div class="gpu">
+        <div class="head"><span class="idx">GPU ${g.index}</span><span class="name">${g.name}</span></div>
+        <canvas id="gsp${g.index}"></canvas>
+        <div class="row"><span>显存</span><b>${(g.memory_used/1024).toFixed(1)} / ${(g.memory_total/1024).toFixed(1)} G</b></div>
+        <div class="bar"><i style="width:${mem}%;background:${color(mem)}"></i></div>
+        <div class="row"><span>利用率</span><b>${util}%</b></div>
+        <div class="bar"><i style="width:${util}%;background:${color(util)}"></i></div>
+        <div class="row"><span>温度 ${g.temperature_gpu}°C</span><span>功耗 ${g.power_w} W</span></div>
+        ${phtml}
+      </div>`;
+    }).join('');
+
+    // 其他推理服务(ComfyUI 等, MON_SERVICES 配置后才显示)
+    const svcs = d.services || [], sp = $('svcPanel');
+    if (svcs.length) {
+      sp.style.display = '';
+      $('svcRows').innerHTML = svcs.map(s =>
+        `<div class="rrow" style="font-size:13px;margin-top:4px">
+           <span><span class="dot${s.ok?'':' down'}" style="margin-right:6px"></span>${s.name}</span>
+           <b>${s.ok ? `正常 · ${s.ms}ms${s.info?' · '+s.info:''}` : `不可达 (${s.info||'失败'})`}</b>
+         </div>`).join('');
+    } else sp.style.display = 'none';
+    // GPU 利用率 spark(随主图表所选范围)
+    const t0 = Date.now()/1000 - range;
+    let hp = hist.filter(p => p.ts >= t0);
+    if (hp.length > 120) { const st = Math.ceil(hp.length/120); hp = hp.filter((_,i)=>i%st===0); }
+    d.gpus.forEach(g => {
+      const cv = document.getElementById('gsp'+g.index);
+      if (cv) spark(cv, hp.map(p => p.g && p.g[g.index] ? p.g[g.index][0] : null), '#58a6ff', 30);
+    });
+
+    if (Date.now()/1000 - histTs > 30) fetchHist();
+  } catch(e) { $('meta').textContent = '数据获取失败: '+e; }
+}
+
+renderTabs();
+tick();
+timer = setInterval(tick, 2000);
+fetchHist();
+</script>
+</body>
+</html>
