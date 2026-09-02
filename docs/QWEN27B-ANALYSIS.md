@@ -557,6 +557,8 @@ autoresearch = 630 行/单 GPU/5 分钟迭代的 agent 自主研究循环。借�
 | 0-3 | llama.cpp 4 副本（生产，不动） | iq4_xs + MTP + 256K，97% 显存，单流/长上下文/VRAM 天花板 |
 | 4-5 | 门禁（2026-09-02 17:29 进行中，跑完释放） | A/B 双实例 |
 | 6-7 | **SGLang FP8 TP2 单实例** | RFT 生成产能 + LoRA 候选评估 + 夜航自进化循环专用 |
+> **2026-09-02 更新**：2 卡 SGLang 生产 + 6 卡训练的 A/B 实证与最终决策见 **§15**。
+
 
 FP8 TP2 每卡预算：权重 13.65G + 256K KV(TP 分片) 2.3G + GDN 态(分片) + 激活/CUDA ctx ~1G
 ≈ 18G/卡，余量 ~6G → 可跑 256K 但并发长上下文容量小于 llama.cpp 单副本（97% 满载），
@@ -847,6 +849,9 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 - **建议**：RFT 回路走 SGLang（multi-LoRA + HiCache），生产高并发补位走 vLLM（长上下文/MTP 数字好）——
   两实例可在 GPU6/7 上分时或分卡验证
 
+> **2026-09-02 最终裁决**：本机 A/B 实证（聚合/单流/256K）后，生产定为 **2 卡 SGLang（替代 4 副本 llama.cpp）**，详见 **§15**。
+
+
 ### 14.9 新增风险
 
 - **NVFP4 需 Marlin 内核**，Ampere/Ada 均无原生 FP4 硬件（靠 Marlin 仿真）；4090 上 NVFP4 数字须实测
@@ -865,3 +870,109 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 - [ ] **FP8 KV（逐头）256K 下的 ruler 质量**（长上下文误差可控性）
 - [ ] **vLLM vs SGLang 同条件 A/B**（长上下文 decode / 高并发聚合 / multi-LoRA，裁决 14.8 分工）
 - [ ] **CPU HiCache × 503GB** 对大池 re-prefill 的消解率（SGLang 侧，对照 §13.6）
+
+
+## 15. 三引擎横评（llama.cpp / vLLM / SGLang）与 2 卡 SGLang 生产决策（2026-09-02 实证）
+
+### 15.1 用户意图与范围
+
+- 用户问题："llama.cpp、vLLM、SGLang 以及融合？" + 后续自训练/微调适配 4090 硬件，准备以后用 2 张 4090 做推理。
+- 本节交付：三引擎横评（定位 + 本机 A/B）、融合策略（推理用谁 / 训练用谁）、2 卡 SGLang 生产决策、6 卡训练侧适配。
+- **核心结论先行**：2×4090 SGLang（TP2, FP8）饱和聚合 **293 tok/s**，是 4 副本 llama.cpp（**~130 tok/s**）的 **2.2×**，每卡 **4.5×**（146.5 vs 32.5）；MTP/NEXTN 投机把单流从 34.8 提到 **67.8**（≈ llama 生产 SLA 72）。→ **用 2 卡 SGLang 替代 4 副本 llama.cpp，释放 4 卡给训练**，决策成立。
+
+### 15.2 三引擎定位（为什么选 SGLang）
+
+| 维度 | llama.cpp b10715 | vLLM | SGLang 0.5.10 |
+|---|---|---|---|
+| 量化 | GGUF (iq4_xs) | FP8/W8A8/FP4 | FP8 block [128,128] e4m3 |
+| 并行 | 单卡/多副本，无 TP | TP | TP2（本机） |
+| KV | q4_0 | FP8 | FP8 (fp8_e4m3) |
+| 前缀复用 | `--cache-reuse` | APC | **RadixAttention**（最强） |
+| 投机 | MTP draft (q8_0) | MTP/EAGLE | **NEXTN/MTP**（head 内建，无独立 draft 权重） |
+| multi-LoRA | 无 | 中 | **最强（RFT 主战场）** |
+| 长上下文 | 单副本 256K | 强 | 256K 单序列容纳（§15.5 实测） |
+| 本机部署 | 已装（生产） | **未装** | 已装 + `qwen3_5.py` 定制模型文件 |
+
+- **vLLM 未纳入 A/B 的原因**：本机 8 个 Python 环境（`/data/sglang/venv`、`/usr/bin`、miniforge `torch`/`cuda124`）均未安装 vLLM；`qwen3.5` 是 hybrid-GDN 新架构（SGLang 0.5.10 都需要定制 `qwen3_5.py` 模型文件），vLLM 需先补 `qwen3_5` 架构支持再装，属非平凡集成。预期 vLLM（PagedAttention/FP8/TP）与 SGLang 相近，SGLang 在 RadixAttention 前缀复用 + MTP/NEXTN + multi-LoRA 上略优。→ vLLM 列为**可选第三数据点**（§15.9 待办），不阻塞 2 卡 SGLang 决策（SGLang 已实证 ≥ llama.cpp）。
+- **融合策略**：生产推理走 **SGLang**（聚合/前缀/多 LoRA 全面）；llama.cpp 保留作 GGUF 快速实验/秒级回退；vLLM 暂不引入（边际收益低）。训练走释放后的卡（HF/accelerate/DeepSpeed，§15.8）。
+
+### 15.3 环境
+
+- 2×4090 24G sm_89（GPU6/7），PCIe 无 NVLink（TP2 allreduce 走 PCIe；"Setup Custom allreduce failed … peer access is not supported" 为良性，已 `--disable-custom-all-reduce` 静默，自动回退标准 allreduce）。
+- SGLang 0.5.10，FP8（compressed-tensors block `[128,128]`，e4m3，动态激活），KV `fp8_e4m3`。
+- 关键前置修复：`is_layer_skipped` 子串匹配 bug（§15.4）——不修则 FP8 输出乱码。
+
+### 15.4 关键修复：`is_layer_skipped` 子串匹配导致 FP8 输出乱码（已修复，已验证）
+
+- **现象**：SGLang 0.5.10 TP2 FP8 加载后 256 条 `mlp.gate_up_proj.weight_scale_inv not found in params_dict` 告警，推理输出乱码。
+- **根因**：`quantization/utils.py` 的 `is_layer_skipped` 用松散**子串**匹配 `any(ignored in shard_prefix …)`。Checkpoint `modules_to_not_convert`（882 项）含 MoE 路由门 `model.language_model.layers.N.mlp.gate` / `.shared_expert_gate`——`…mlp.gate` 恰好是 FFN 分片前缀 `…mlp.gate_proj` 的**子串** → gate 分片被误判 skip（落 BF16、无 `weight_scale_inv` 块标度），up 分片不 skip（FP8）→ 融合 `gate_up_proj` 退化为 `UnquantizedLinearMethod`，而 `down_proj` 仍是 `Fp8LinearMethod` → 256 告警 + MLP 块标度丢失 → dequant 乱码。
+- **修复**：加**模块边界感知**匹配 `_ignored_matches_module(ignored, prefix)`——子串仅在两侧为 `.`/串边界时命中（`mlp.gate` 匹配 `mlp.gate` 但不匹配 `mlp.gate_proj`；`mlp.experts` 等部分路径仍工作）。`utils.py` 备份 `utils.py.bak`。
+- **验证**：`gate_up_proj`/`down_proj`/`in_proj_qkvz` `skipped=False`（Fp8，`has_scale=True`，TP=2 `logical_widths=[8704,8704]`）；路由 `mlp.gate` `skipped=True`；告警 **256→0**；输出连贯（Paris / 质数 / 量化定义 / 三段论传递性全对）。
+- **可复用探针**：在 decoder 层 `__init__` 打印 `mlp.gate_up_proj.quant_method`（`WARP_DIAG`）→ 直接暴露 `qm=UnquantizedLinearMethod`；再对 `is_layer_skipped` 前缀手工复现 `ValueError: some but not all shards of gate_up_proj are quantized`，锁定 gate/up 分片不一致。
+
+### 15.5 A/B 实测（2026-09-02，4090，同脚本同提示集）
+
+| 指标 | SGLang TP2 non-MTP (mem-frac 0.90) | SGLang TP2 MTP/NEXTN (mem-frac 0.85) | llama.cpp 4 副本 (iq4_xs + MTP) |
+|---|---|---|---|
+| 单流 decode (tok/s) | **34.8** | **67.8** | 72（SLA）；长文 ~42-46 |
+| 聚合 c8 (tok/s) | 249.7 | 138.7 | 116.4（256tok 长文） |
+| 聚合 c16 (tok/s) | 287.8 | 190.7 | 131.7 |
+| 聚合 饱和 (tok/s) | **293.3**（c24） | 210.0（c24） | **~130**（c12-24） |
+| 每卡 (tok/s/card) | **146.5** | 105 | **32.5** |
+| 256K 单序列 | **容纳**（52tok，30 tok/s） | KV 池缩小（draft 权重占 ~1.2G） | 单副本容纳（ctx 262144） |
+| 质量 spot-check | math 2/3, needle OK | （MTP 不改质量） | math 1/3, needle false（小样本） |
+| MTP 接受率 | — | 0.86-1.00，~1.8-2.0 tok/step | — |
+
+- **单流 34.8 的口径**：completions API、短提示（质数）、**raw decode 率**（无推理 token 稀释）。推理模型走 chat API 时 thinking token 计入 `completion_tokens`，内容率会更低——**决策指标用聚合，不用单流**。
+- **对 §14.6 外推的修正（重要）**：§14.6 依 0xSero（TP1 43 → TP2 113 → TP4 137 tok/s 单流，3090）外推 2×4090 单流 **115-130 tok/s**，**本机未复现**（实测 non-MTP 34.8 / MTP 67.8）。差异来源：(a) Qwen3.5 **hybrid-GDN 架构**——48 层 GDN 的逐 token 状态递推（`S_t=decay·S_{t-1}+outer(k_t,v_t)`，串行、难跨 batch 并行，TP2 还需状态 allreduce），使单流显著低于纯注意力的带宽外推；(b) **sub-optimal W8A8 Block FP8 kernel**（本机 shape 无最优 config，log 有告警）；(c) 参考方配置可能不同。→ **单流不可靠外推，以本机实测为准**；聚合不受此影响（§15.6 已 2.2× 胜出）。
+
+### 15.6 解读
+
+1. **聚合（生产容量）**：SGLang 2 卡 **293** ≈ **2.2×** llama 4 卡 **~130**；每卡 **4.5×**（146.5 vs 32.5）。→ **2 卡即可承载 4 卡吞吐**，直接释放 2 卡。
+2. **单流（交互延迟）**：non-MTP 34.8 偏低（TP2 PCIe allreduce + GDN 状态递推 + FP8 内核），MTP 67.8 ≈ llama SLA 72。→ 延迟敏感期切 MTP。
+3. **MTP 取舍**：单流 ×2 但**聚合降 28%**（293→210）——draft 前向在高 batch 下摊薄不划算。→ 吞吐优先用 non-MTP，延迟优先用 MTP。
+4. **256K**：non-MTP 0.90 容纳（实测 52tok）；MTP 0.85 KV 池缩小（draft 权重占 ~1.2G）→ 长上下文走 non-MTP。
+5. **质量**：两引擎 spot-check 均通过（小样本，不作质量裁决）；FP8（SGLang）与 iq4_xs GGUF（llama）在本模型上精度相当。
+
+### 15.7 决策：2 卡 SGLang 生产（替代 4 副本 llama.cpp）
+
+- **采用** SGLang 0.5.10 TP2（GPU6/7）替代 4 副本 llama.cpp（GPU0-3）。
+- **默认配置（吞吐优先，non-MTP）**：
+  `--tp 2 --mem-fraction-static 0.90 --context-length 262144 --kv-cache-dtype fp8_e4m3 --max-running-requests 8 --chunked-prefill-size 8192 --mamba-scheduler-strategy auto --mamba-ssm-dtype float32 --disable-custom-all-reduce`（聚合 293，256K 容纳，单流 34.8）。
+- **延迟配置（可选切换，MTP/NEXTN）**：在上面基础上改 `--mamba-scheduler-strategy extra_buffer`、`--mem-fraction-static 0.85`，加 `--speculative-algorithm NEXTN --speculative-num-steps 1 --speculative-eagle-topk 1 --speculative-num-draft-tokens 1`，env `SGLANG_ENABLE_SPEC_V2=1`（单流 67.8，聚合 210）。
+- **迁移步骤**：SGLang 常驻 GPU6/7 → OpenResty `qwen27b-lb` upstream 4→2 → **24h 生产验证**（聚合/单流/256K/质量四轴）→ 通过后释放 GPU0-3。
+- **回退**：llama.cpp 4 副本镜像 + iq4_xs 权重保留，异常时 OpenResty upstream 2→4 秒级切回。
+
+### 15.8 训练侧：释放后 6 卡适配 4090（sm_89）
+
+- **可用卡**：GPU0-3（llama 迁移释放，4 卡）+ GPU5（已空闲，1 卡）= **5 卡**；GPU4 被 gate-v1 占至 baseline 跑完（跑完即 +6 卡）。
+- **4090 sm_89 训练适配**：
+  - 精度：LoRA/QLoRA 走 **bf16**（4090 Ada 有 bf16 硬件）；27B 全参需 ≥4 卡 ZeRO-2 + gradient checkpointing，显存紧则 QLoRA（4-bit）。
+  - 并行：`torchrun --nproc_per_node 5` + DeepSpeed ZeRO-2/3 或 FSDP；5 卡非 2 幂，ZeRO-3 通信略增但可接受。
+  - 显存估算：27B bf16 权重 ≈ 55G，单卡放不下全参 → ZeRO-3 切分 5 卡 ≈ 11G/卡 权重 + 激活/梯度，需 gradient checkpointing + ≤8k seq 才稳；LoRA 只训适配层（<2G/卡），5 卡轻松。
+  - 与推理共存：训练卡（GPU0-5）与 SGLang（GPU6/7）**物理隔离**，无抢占。
+- **后续自训练/微调**：接 gate 门控（§12/§14）；RFT multi-LoRA 在线回路走 SGLang（若训练需在线推理），离线微调走独立 HF/DeepSpeed。
+
+### 15.9 待办 / 待实测（回填本节）
+
+- [ ] **FP8 W8A8 Block kernel per-shape 调优**（消解 "sub-optimal kernel config" 告警，评估 non-MTP 单流 34.8 / c16 per_req 20.1 的提升空间）
+- [ ] **vLLM 是否补测**（装 vLLM + 补 `qwen3_5` 架构支持，第三数据点；当前不阻塞决策）
+- [ ] **GDN state 池 48 并发 sizing**（对照 0xSero TP2=48；本机 max-running 8 未压到并发天花板）
+- [ ] **2 卡 SGLang 迁移后 24h 生产验证**（聚合/单流/256K/质量四轴回填 §15.7）
+- [ ] **训练侧 5 卡 LoRA 显存/吞吐基准**（bf16 LoRA + QLoRA 各一组，回填 §15.8）
+- [ ] 回填 §14.10：`2×4090 TP2 单流`（实测 34.8/67.8，未达外推 115-130，见 §15.5）、`vLLM vs SGLang A/B`（vLLM 未部署，见 §15.2）、`GDN state 池 sizing`（待 48 并发压测）
+
+### 15.10 不要做
+
+- 不要在 4090 上**去掉 §15.4 的 `is_layer_skipped` 修复**——否则 FP8 输出乱码。
+- 不要在生产 SGLang 进程上 **pattern-kill**（用 `ss -ltnp | grep :30000` 取 PID 再 `kill $PID`）。
+- 不要**假设 MTP 提升聚合**——实测降 28%（293→210），仅提单流。
+- 不要**用单流 34.8 否定 2 卡 SGLang**——决策指标是聚合（293 ≥ llama 4 卡 ~130）。
+- 不要在 **GPU0-3（迁移前）/ GPU4（gate）** 上抢卡训练；等 SGLang 迁移 + 24h 验证通过再动。
+- 不要把 §14.6 的 3090 单流外推（115-130）当本机预期——GDN 状态递推 + FP8 内核使本机单流显著低于外推，以实测为准。
+
+### 15.11 数据可信度分层
+
+- **T1（本机实测，可复现）**：§15.5 全部数字——同脚本/同提示/同硬件；脚本 `/data/sglang/ab_bench.py` + `agg_bench.py`，日志 `/tmp/sgl_*.log`，结果 `/tmp/ab_*.json`。
+- **T2（本机实测 + 社区方向）**：§15.4 根因（本机复现锁定）、§15.2 三引擎定位（社区 + 本机部署事实）。
+- **T3（外推 / 未复现 / 未部署）**：§14.6 的 115-130 单流外推（本机未复现，见 §15.5）；vLLM 数字（未部署，仅社区参照）。
