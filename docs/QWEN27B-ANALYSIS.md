@@ -617,3 +617,119 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 - ❌ 为 SGLang 实验下生产副本（GPU0-3）：生产 SLA（48 路全成功）优先
 - ❌ 跳过 Step 3 ruler 直接比吞吐：正确性未证前速度数据无意义（7.9 渐进压测原则）
 - ❌ 用 SGLang 替代粘滞 LB 的跨副本路由：机制边界不同，见 12.2-2
+
+
+## 13. 外部实证双参照：W4A16-vLLM 卡片 + 双 3080 SGLang 补丁（2026-09-02）
+
+> 背景：§12 把 SGLang/vLLM 分支的生死项列为"qwen3_5 混合注意力是否在框架注册表"。本节两个
+> 外部实证直接给出答案（vLLM 与 SGLang 双框架均可服务本架构），并各贡献一组可复用配方。
+> 数据可信度：外部实测（他人硬件/量化），与我们硬件（4090 SM89）和现役（iq4_xs llama.cpp）
+> 存在跨变量，仅作**形态判定与方向参考**，落地前须在我们 GPU6/7 复测（见 13.8）。
+
+### 13.1 参照一：bowmanslayer/Qwen3.8-27B-Uncensored-W4A16-vision-mtp（vLLM 路线）
+
+- **量化**：W4A16 GPTQ（AutoRound, group 128），**bf16 视觉塔完整保留**，MTP 头可选（独立 849MB `model-mtp.safetensors`）
+- **部署**：2×RTX 3090 TP2 + **vLLM 0.20.2**，256K 上下文，权重 8.87G/卡，KV 余量 **12.93G/卡**（总池 415K token）
+- **实测**：单流 thinking-on 66-68 tok/s；**16 并发聚合 ~700 tok/s**；prefill 峰值 3300 tok/s
+- **量化配方（三点可偷）**：
+  ① 量化前剥离视觉（`preprocessor_config.json` 量化期间须不在，否则 auto-round 静默切 MLLM 校准用错数据集）
+  ② `linear_attn.in_proj_a/b` 排除量化（48 层 GDN 敏感层保精度）
+  ③ MTP 头原样拷贝、绝不量化
+- **评测方法论**：**ex-trunc（剔除截断）才是真实能力值**——thinking-ON 下 4096 token 采样预算在
+  难题上常不够 `</think>` 闭合，8-17% 截断是采样预算伪影、非能力损失；"thinking ON vs OFF 不可跨表比较"
+- **对我们的意义**：vLLM 分支生死项=已证可行；W4A16 TP2 比 §12 的 FP8 假设更优（KV 余量 12.9G vs 6G）；
+  **700 vs 420 tok/s 是服务侧补位最强定量证据**（2×3090 干过我们 4×4090）；视觉恢复有现成验证路径
+
+### 13.2 参照二：kk-pcl/sglang-qwen38-dual-3080-patch（SGLang 路线）
+
+- **环境（锁定可复现）**：SGLang `0.5.19.dev228+g4cb5aebfe`（上游 commit `4cb5aebfe`）/ PyTorch 2.13.0+cu130 /
+  FlashInfer 0.6.17 / Triton 3.7.1 / NCCL 2.29.7；2×RTX 3080 20GB（SM86）TP2 WSL2
+- **权重**：主 `cyankiwi/Qwen3.8-27B-AWQ-INT4` + 草稿 `syvai/Qwen3.8-27B-DFlash2-W4A16`（~0.94G/卡）
+- **三项优化**：
+  ① DFlash2 `fc.weight`：每卡整份 `nn.Linear` → **TP 分片 `RowParallelLinear`**（改 `sglang/srt/models/dflash.py`）
+  ② 主模型 KV：默认 FP16 → **逐头 Per-KV-Head FP8 E4M3 静态校准**（16 全注意力层，per-head scale
+     比整层共用单 scale 更控长上下文误差）；DFlash2 草稿用更稳的逐层标量 FP8
+  ③ SM<90 兼容：禁 Hopper 专用 symmetric-memory logits gather → 回退普通 TP NCCL all-gather
+     （避 target verify CUDA Graph 阶段 `SIGFPE`）
+- **实测**：KV 池 218,278 token（mem_fraction 0.90）；repeat 请求 `cached_tokens=64`；DFlash `accept rate`
+  可观测；无 OOM / illegal-memory-access
+- **作者机实测（含 CPU HiCache）**：GPU 上下文池 ~255K token；prefill <10K ≈ **1300-1400 tok/s**；
+  decode 日常 **90+ tok/s**；**DFlash2 高接受时峰值 >200 tok/s**
+- **关键坑**：**Mamba/GDN State 槽位独立于 attention KV 池**，`max-mamba-cache-size` 提到 20，
+  避免"attention KV 还在但 State 被淘汰"触发整段 re-prefill
+- **CPU HiCache**：被淘汰的前缀 KV 落 CPU 内存，减少重复 prefill（对 503GB 内存级主机是数量级收益）
+- **工程**：`apply_patch.py --verify / --rollback` 自检回滚；离线测试覆盖 scale schema / TP 头切分 /
+  KV write 形状；语义锚点非行号（源码漂移会停而非盲套）
+- **风险**：静态校准非动态；scale 绑定 TP=2 与模型结构；**3080 无原生 FP8 张量核**（FP8 在此为
+  容量/带宽优化，而 **4090 SM89 有原生 FP8 张量核 → 容量+计算双收益，比 3080 报告更优**）；
+  SGLang 升级须先在副本环境 `apply_patch.py --verify`
+
+### 13.3 三方对照（形态判定，跨变量仅作方向）
+
+| 维度 | llama.cpp（现役） | vLLM W4A16（参照一） | SGLang AWQ+DFlash2（参照二） |
+|---|---|---|---|
+| 量化 | iq4_xs GGUF | W4A16 GPTQ g128 | AWQ-INT4 + DFlash2-W4A16 |
+| 硬件 | 4×4090 四副本 | 2×3090 TP2 | 2×3080 20G TP2 |
+| 投机解码 | MTP 46.6% | MTP 可选 | **DFlash2 峰值 200+** |
+| KV | q4_0 | FP16 默认 | **逐头 FP8（静态校准）** |
+| 256K | ✅ 97% 显存 | ✅ 12.9G KV 余量 | ✅ 255K 池 |
+| 单流 | 72-80 tok/s | 66-68 tok/s | 90+ / 峰值 200+（3080） |
+| 16 并发聚合 | ~420 tok/s | **~700 tok/s** | 未报 |
+| Multi-LoRA | 手工 GGUF 链 | ✅ | **✅ 最强（RFT 主战场）** |
+| CPU 卸载 | ❌ | ❌ | **✅ HiCache（503GB 内存）** |
+| 视觉 | ❌ LM only | ✅ bf16 塔 | 未报 |
+| GDN State | 固定 0.88G/seq | — | ✅ 可调池（坑③） |
+| 外部依赖 | 无 | 无（下载即用） | 社区补丁（钉版可复现） |
+
+### 13.4 对 §12 的修订
+
+1. **生死项已闭合**：qwen3_5 混合注意力在 vLLM 与 SGLang **双框架**均实证可服务（不再待测）
+2. **KV 压缩配方落地**：§12 假设的"FP8"细化为**逐头 Per-KV-Head FP8 E4M3 + 静态校准**
+   （per-head 比整层 scale 更控长上下文误差），有现成 scale 文件与校准流程可参考
+3. **投机解码双路径**：MTP（llama.cpp/vLLM 原生，免补丁）vs DFlash2（SGLang，需 fc.weight
+   RowParallel 补丁，峰值更高，~0.94G/卡）
+4. **GDN State 池独立 sizing**：`max-mamba-cache-size` 是一等公民资源（印证 §2 GDN 态固定成本
+   分析，但 SGLang 侧可/须显式调，调太小触发整段 re-prefill）
+5. **CPU HiCache × 503GB 内存**：大池问题的第三条解法（继"独占 slot"、"前缀 radix"之后），
+   可能直接消解 r2/r3 独占 slot 设计（被淘汰前缀落 CPU 而非全量冷 prefill）
+
+### 13.5 决策分叉（服务侧补位选哪条）
+
+- **路线 A：vLLM + W4A16**——最简（下载即用免补丁）、聚合最高（700）、带视觉、MTP 免补丁。
+  适合"直接补强生产 / 要视觉 / 要最高聚合"
+- **路线 B：SGLang + AWQ + DFlash2 + HiCache**——单流潜力最高（200+）、CPU 卸载（503GB 内存独有）、
+  Multi-LoRA 最强（RFT 主战场）、GDN State 可调。需社区补丁（钉版可复现）。
+  适合"RFT 回路 + 长上下文 + 高并发"三合一
+- **推荐：B 为主补位，A 为视觉/聚合备选**。理由：
+  ① RFT multi-LoRA 是我们最重要的用例，SGLang 最强；
+  ② 503GB 内存是只有 SGLang HiCache 能吃到的独有资产；
+  ③ DFlash2 单流 200+（3080 实测）有望反超 llama.cpp MTP（4090 上 72-80），单流延迟不再是 llama.cpp 独占优势。
+  A 留作"要视觉或要免补丁聚合"时的备胎。
+
+### 13.6 修订后的快路径（GPU6/7，不碰生产/门禁，零自研量化）
+
+1. clone 补丁测试环境（`scripts/create_tested_env.sh`：SGLang 0.5.19.dev228 钉版 + 锁定依赖）
+2. 下载主 `cyankiwi/Qwen3.8-27B-AWQ-INT4` + 草稿 `syvai/Qwen3.8-27B-DFlash2-W4A16`（safetensors，非 GGUF）
+3. `apply_patch.py`（逐头 FP8 KV + DFlash2 fc.weight）→ `--verify` → 离线测试
+4. GPU6/7 TP2 启动：`max-mamba-cache-size=20` + CPU HiCache（吃 503GB）+ `mem_fraction 0.90`
+5. 跑 ruler（humaneval/xfc/gsm8k/ifeval/needle/tps，thinking ON + **ex-trunc**），对照 llama.cpp 生产
+6. 判定：质量 ≥ 生产 且（单流或聚合反超）→ 服务侧补位定 B，回填 §12.7 + 本节 13.8 待实测项
+
+### 13.7 新增风险
+
+- **社区补丁依赖**：非 SGLang 官方功能，钉 `4cb5aebfe` commit 复现；升级前副本环境 `apply_patch.py --verify`
+- **静态校准非动态**：scale 绑定 TP=2 与模型结构，换拓扑/架构须重校
+- **跨变量**：3080(SM86 无 FP8 核) vs 4090(SM89 有 FP8 核)、AWQ vs iq4_xs、3090 vs 4090——
+  所有外部数字仅作方向，落地以我们 GPU6/7 复测为准
+- **DFlash2 需 W4A16 safetensors**（syvai），我们手头是 GGUF Q4_K_M，须另下
+
+### 13.8 待实测（在我们 4090 上，回填本节）
+
+- [ ] SGLang 0.5.19.dev228 + 补丁在 4090 SM89 起服务（原生 FP8 张量核是否进一步加速）
+- [ ] DFlash2 在 4090 的 accept rate 与峰值 tok/s（对照 llama.cpp MTP 46.6% / 72-80 tok/s）
+- [ ] 逐头 FP8 KV 256K 下的 ruler 质量（长上下文误差是否可控）
+- [ ] CPU HiCache 在 503GB 内存下的 re-prefill 消解率（大池问题的第三条解法）
+- [ ] `max-mamba-cache-size` 的 GDN State 驱逐阈值实测（调太小是否触发整段 re-prefill）
+- [ ] Multi-LoRA 3-5 候选同进程（RFT 回路重构，§12.4）
+- [ ] 16/48 并发聚合 vs 现役 420 tok/s
+- [ ] 对照 vLLM W4A16（路线 A）同条件聚合，裁决 A/B 主次
