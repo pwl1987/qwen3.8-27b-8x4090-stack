@@ -863,12 +863,12 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 ### 14.10 待实测（我方 4090，回填本节）
 
 - [ ] **NVFP4 在 4090(Ada) Marlin 的 254K decode**（对照 alesha-pro 84@254K 3090，4090 应更优）
-- [ ] **2×4090 TP2 单流**（外推 115-130 tok/s，验证是否达 1.5-1.8× 生产）
+- [x] **2×4090 TP2 单流**：实测 **34.8 (non-MTP) / 67.8 (MTP) tok/s**，未达外推 115-130（GDN 状态递推 + sub-optimal FP8 内核，见 §15.5）
 - [ ] **GDN state 池 sizing**：48 并发最小 mamba-cache（对照 0xSero TP2=48 并发）
 - [ ] **MTP vs DFlash2 在 xfc 工具轴的结构化输出正确性**（vocab 腐蚀检查）
 - [ ] **容量规划**：48 并发最优座位数 + 10-15% 余量（避抢占级联，对照 syv-ai）
 - [ ] **FP8 KV（逐头）256K 下的 ruler 质量**（长上下文误差可控性）
-- [ ] **vLLM vs SGLang 同条件 A/B**（长上下文 decode / 高并发聚合 / multi-LoRA，裁决 14.8 分工）
+- [~] **vLLM vs SGLang 同条件 A/B**：vLLM 未部署（需补 qwen3_5 架构支持）；SGLang 已实证 **2.2× llama.cpp**（§15.5），生产定为 2 卡 SGLang（§15.7）
 - [ ] **CPU HiCache × 503GB** 对大池 re-prefill 的消解率（SGLang 侧，对照 §13.6）
 
 
@@ -960,7 +960,7 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 - [ ] **GDN state 池 48 并发 sizing**（对照 0xSero TP2=48；本机 max-running 8 未压到并发天花板）
 - [ ] **2 卡 SGLang 迁移后 24h 生产验证**（聚合/单流/256K/质量四轴回填 §15.7）
 - [ ] **训练侧 5 卡 LoRA 显存/吞吐基准**（bf16 LoRA + QLoRA 各一组，回填 §15.8）
-- [ ] 回填 §14.10：`2×4090 TP2 单流`（实测 34.8/67.8，未达外推 115-130，见 §15.5）、`vLLM vs SGLang A/B`（vLLM 未部署，见 §15.2）、`GDN state 池 sizing`（待 48 并发压测）
+- [x] 回填 §14.10：`2×4090 TP2 单流`（实测 34.8/67.8，见 §15.5）+ `vLLM vs SGLang A/B`（vLLM 未部署，见 §15.2）已回填；`GDN state 池 sizing` 待 48 并发压测
 
 ### 15.10 不要做
 
