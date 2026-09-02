@@ -733,3 +733,135 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 - [ ] Multi-LoRA 3-5 候选同进程（RFT 回路重构，§12.4）
 - [ ] 16/48 并发聚合 vs 现役 420 tok/s
 - [ ] 对照 vLLM W4A16（路线 A）同条件聚合，裁决 A/B 主次
+
+
+## 14. 九仓库外部实证合成：量化格式 / KV / 投机 / GDN 池 / 容量规划（2026-09-02）
+
+> 背景：§12/§13 建立服务侧补位框架后，又收齐 9 个外部仓库（合计 11 个实证），覆盖
+> 1×/2×/4× 3090 与 4×3090/单 4090，llama.cpp / vLLM / SGLang 三引擎，GGUF / NVFP4 / FP8 /
+> AWQ-INT4 四量化，MTP / DFlash2 / DSpark / ngram-mod 四投机路径。本节做跨仓库交叉合成，
+> 把服务侧补位从"方向判断"收敛到"可执行配方 + 资源约束"。数据可信度：外部实测（他人硬件/
+> 量化），跨变量仅作方向与配方参考，落地以我们 GPU 复测为准（见 14.10）。
+>
+> 仓库索引（各自唯一贡献）：
+> - `kelnei/qwen38-4090`（**单 4090 同硬件 + llama.cpp 同引擎**）：验证 q4_0 KV / MTP>DSpark / `--parallel 1` / q5_1 陷阱 / thinking 预算
+> - `syv-ai/qwen38-27b-rtx3090`（**同模型单卡 3090 最激进**）：64 并发 ~1035 tok/s / 单流 MTP 121 / 复现自身上下文 381 / KVarN / 投机×并发交叉 / 抢占级联
+> - `0xSero/qwen38-3090-sglang`（SGLang 钉版容器）：AWQ-INT4+DSpark / **GDN state 池决定并发上限** / TP 带宽标度 / 全钉版可复现
+> - `alesha-pro/qwen38-27b-bench-4x3090`（288 点引擎矩阵）：**NVFP4>FP8** / **FP8 KV 长上下文必需** / TP2 vs TP4 取舍
+> - `tonyd2wild/Qwen38-Flash-Next-4x3090`（llama.cpp PR）：ngram-mod 投机 agentic +45%
+> - `loktar00/qwen38-flash-next-vllm-3090-recipe`：Ampere FP8 QSA KV reader
+> - `vektorprime/qwen38-flash-next-pp2`：PP=2 + PLE CPU 卸载（vLLM PR #53899）
+> - `alesha-pro/qwen38-flash-next-4x3090` / `DominikBucko/qwen38-flash-next-2x3090`：Flash-Next 262K / 2×3090+128GB RAM CPU 卸载
+
+### 14.1 量化格式全景（服务侧权重选什么）
+
+| 格式 | 位宽 | 最优点 | 关键证据 |
+|---|---|---|---|
+| **NVFP4**（NVIDIA FP4, Marlin） | 4-bit float | **254K 长上下文 decode 最优** | alesha-pro：TP4/FP8-KV 254K=74.85（no-MTP）/84.26（MTP），比 FP8 权重快 15-21% |
+| **AWQ-INT4**（Marlin） | 4-bit | Ampere decode（weight-bandwidth-bound，~2× vs bf16） | 0xSero / kk-pcl 均选它；3090 无 FP8 核时 INT4 Marlin 是最快权重路径 |
+| FP8（E4M3） | 8-bit | 省显存，但 decode 慢于 NVFP4 | alesha-pro：254K 落后 NVFP4 约 15-21% |
+| GGUF UD-Q4_K_XL | 4.5 | llama.cpp 单 4090 | kelnei：单 4090 单流 104 tok/s（MTP） |
+| GGUF iq4_xs（我们现役） | 4.2 | llama.cpp 生产 | 我们：72-80 tok/s 单流 |
+| KVarN（KV 侧 4/2-bit） | KV 4/2 | 240K+ 巨上下文 | syv-ai：245K max-model-len |
+
+**收敛结论**：服务侧（vLLM/SGLang）甜点 = **4-bit 权重（NVFP4 或 AWQ-INT4）+ FP8 KV**。
+- **NVFP4 长上下文 decode 最优**（254K 比 FP8 快 15-21%），但需 Marlin 内核
+- **AWQ-INT4 是 Ampere 验证最充分的 Marlin 路径**（0xSero/kk-pcl 双证）
+- 我们 4090 是 Ada（sm_89）：NVFP4/AWQ-INT4 皆可，NVFP4 长上下文数字最好；FP8 权重仅作"省显存但慢"的备选项
+- 修订 §12/§13 的"FP8 权重"假设为 **NVFP4 优先 / AWQ-INT4 次之**
+
+### 14.2 KV 缓存（256K 的真正使能项）
+
+- **FP8 KV 是长上下文的必需项**（alesha-pro 铁证）：NVFP4/no-MTP，BF16 KV→FP8 KV 把
+  254K decode 从 27.26→52.84（TP2）/ 31.18→74.85（TP4），**近乎翻倍**，且防长上下文容量失败
+- **逐头 Per-KV-Head FP8**（kk-pcl）：per-head scale 比整层单 scale 更控长上下文误差
+- **KVarN 4/2-bit KV**（syv-ai）：推 240K+ 的有损 KV 方案
+- **我们 llama.cpp 的 q4_0 KV 被 kelnei 独立验证**：120K 处 needle 3/3、prompt 全速（1782 tok/s，
+  同 q8_0）、**decode 比 q8_0 还快**（104.0 vs 97.6，缓存小每步搬移内存少）——我们的现役选择被第三方证实正确
+- 新坑（kelnei）：**q5_1 KV 是陷阱**——能加载、显存报最优、短 prompt 正常，然后塌到 18 tok/s GPU 0%。
+  只有 f16/q8_0/q4_0 有 CUDA flash-attention KV 内核，其余静默落 CPU。**只测加载/短 prompt 抓不到，须跑满 ctx 长生成**
+
+### 14.3 投机解码全景（MTP / DFlash2 / DSpark / ngram-mod）
+
+| 草稿器 | 可用框架 | 接受/峰值 | 关键特性 |
+|---|---|---|---|
+| **MTP（模型内置）** | llama.cpp / vLLM | 我们 46.6%；kelnei 0.619 | **共享目标 vocab → 对结构化输出（工具/JSON）免疫**；高并发扩展性最好（syv-ai 64 并发聚合 383） |
+| DFlash2 | vLLM（syv-ai PR #52816）/ SGLang（kk-pcl） | 高；单流 127-130 | 7 草稿/趟；**复现自身上下文 381 tok/s**（从 prompt 直接 draft）；vocab 不同会**静默腐化工具 JSON**（kelnei 警告） |
+| DSpark（1.36B） | SGLang（0xSero） | 贪心代码 len 2.8-4.1，散文 1.7 | 负载相关，代码/greedy 最优 |
+| ngram-mod | llama.cpp PR（tonyd2wild） | agentic +45% | 从上下文抽 n-gram 链，copy/edit 场景强；n-gram 表走 OS 页缓存（系统内存影响小） |
+
+**关键裁决**：
+1. **MTP 对我们 xfc 工具轴最安全**——共享目标 vocab，不会腐化工具调用 JSON；且高并发扩展最好
+   （syv-ai：64 并发 MTP 聚合 383，DFlash2 在 64 并发"5 resident 无稳态"，因 DFlash2 verify 块占用更多 state）
+2. DFlash2/DSpark 单流更快、复现场景强，但 **vocab 不同会静默腐化工具输出**（tok/s 好看、JSON 坏）
+3. 我们生产已用 MTP（46.6%）——方向正确，且 MTP 在长上下文（254K）提速有限（alesha-pro：
+   84 tok/s 短窗假象，长生成落 ~75 同无 MTP），**MTP 收益集中在短-中上下文**
+
+### 14.4 GDN/Mamba State 池（并发上限，不是 KV）
+
+**这是本轮最重要的一手认知**：
+
+- **mamba/GDN state 池决定 max 并发，不是 KV 池**（0xSero 铁证）：4×3090 TP4 有 275K KV token
+  但**只有 9 并发**（state 池限）；2×3090 TP2 有 118K KV 却支持 48 并发（state 池更大）
+- 显式 sizing：`max-mamba-cache-size`（kk-pcl=20）/ `--mamba-cache` 4/8/16/32（0xSero）
+- **投机请求会预占 state 页** → 高并发 + 长独立会话下，投机反而伤吞吐（syv-ai 交叉点测量：
+  短 prompt <8 并发投机赢、之上纯批处理赢；长独立会话交叉点更早）
+- **结论：我们 48 并发目标是服务侧补位的第一资源约束**——须为 48 并发显式配足 state 池，
+  且权衡"开投机 vs 高并发"（投机吃 state，二者争抢同一池）
+
+### 14.5 容量规划（抢占级联陷阱）
+
+- **过度超售 → 抢占级联 → 吞吐崩塌**（syv-ai 实测）：超售 1 轮 10 次抢占、峰值占用 99.4%、
+  每流 3/7/72 tok/s；反之"只开 2 座位"= 0 抢占、14.4 tok/s，**少座位反而多 40% 总工作量**
+- 独立长会话（16K prompt 互不共享）64 并发端到端聚合仅 15.8 tok/s（无共享前缀，全冷 prefill）
+- **规划原则**：座位数按 state 池与 KV 池双约束取小，留 10-15% 余量防抢占；别把并发拉满
+
+### 14.6 TP 标度（weight-bandwidth-bound）
+
+- 模型是权重带宽受限 → **TP 越多单流越快**（0xSero：TP1 43 → TP2 113 → TP4 137 tok/s 单流，3090）
+- **TP2** 选 TTFT/效率/双副本（alesha-pro：254K prefill 1001.8 tok/s vs TP4 744.4）；
+  **TP4** 选 post-prefill 单流 decode 优先
+- **外推到我们的 4090**（带宽 ~1008 GB/s > 3090 936 GB/s）：2×4090 TP2 单流预期 **~115-130 tok/s**，
+  是我们 llama.cpp 生产（72-80）的 **1.5-1.8×**；254K decode 预期 ~53-84 tok/s（vs 我们 195K 的 28-35，~2×）
+
+### 14.7 对 §12/§13 决策的最终修订（置信度从"方向"升到"三方实证 + 硬件外推"）
+
+1. **权重**：FP8 → **NVFP4（长上下文最优）/ AWQ-INT4（Ampere 验证）**
+2. **KV**：确认 **FP8（逐头校准）**，256K 必需；q4_0（llama.cpp 侧）被第三方验证正确
+3. **投机**：**MTP 优先**（xfc 安全 + 高并发扩展最好），DFlash2/DSpark 作复现/单流备选，ngram-mod 作 llama.cpp agentic 备选
+4. **GDN state 池**：升级为**并发第一约束**，须为 48 并发显式 sizing + 与投机权衡
+5. **容量**：别过度超售，按双池取小留余量
+6. **形态**：服务侧补位从"理论 420 vs 700"升级为**四方实证**（bowmanslayer 700@16、alesha-pro 84@254K、0xSero 137 单流、syv-ai 1035@64）+ 4090 硬件外推，单流 1.5-1.8×、长上下文 ~2× 有实测支撑
+
+### 14.8 修订后的服务侧目标架构（8×4090 分工）
+
+| GPU | 用途 | 形态 |
+|---|---|---|
+| 0-3 | llama.cpp 生产（不动，单流/256K/VRAM 天花板/MTP 安全） | iq4_xs 4 副本 + OpenResty LB |
+| 4-5 | 门禁（进行中，跑完释放）→ 之后可并入服务池 | A/B 双实例 |
+| 6-7 | **服务侧补位主实例**：vLLM 或 SGLang，TP2，NVFP4/AWQ-INT4 + FP8 KV（逐头）+ MTP，mamba-cache 按 48 并发 sizing | 隔离产能 + RFT multi-LoRA + 高并发聚合 |
+
+选型细化（待 14.10 实测裁决）：
+- **vLLM**：长上下文 decode 与 MTP 数字最好（alesha-pro 84@254K），bowmanslayer 700@16 聚合，视觉成熟
+- **SGLang**：multi-LoRA 最强（RFT 主战场）+ CPU HiCache（503GB 内存独有），0xSero 钉版容器可照抄
+- **建议**：RFT 回路走 SGLang（multi-LoRA + HiCache），生产高并发补位走 vLLM（长上下文/MTP 数字好）——
+  两实例可在 GPU6/7 上分时或分卡验证
+
+### 14.9 新增风险
+
+- **NVFP4 需 Marlin 内核**，Ampere/Ada 均无原生 FP4 硬件（靠 Marlin 仿真）；4090 上 NVFP4 数字须实测
+- **DFlash2/DSpark vocab 腐化工具输出**：上 xfc 轴前必须验证结构化输出正确性（MTP 无此风险）
+- **GDN state 池 sizing 错** → 并发不足或抢占级联；须实测 48 并发的最小 state 池
+- **社区补丁/PR 依赖**（syv-ai vLLM PR #52816、vektorprime PR #53899、kk-pcl 补丁）：钉 commit 复现，升级前副本验证
+- **跨变量**：3090(Ampere 无 FP8/FP4 核) vs 4090(Ada 有 FP8 核)、NVFP4/AWQ vs iq4_xs——所有外部数字仅作方向
+
+### 14.10 待实测（我方 4090，回填本节）
+
+- [ ] **NVFP4 在 4090(Ada) Marlin 的 254K decode**（对照 alesha-pro 84@254K 3090，4090 应更优）
+- [ ] **2×4090 TP2 单流**（外推 115-130 tok/s，验证是否达 1.5-1.8× 生产）
+- [ ] **GDN state 池 sizing**：48 并发最小 mamba-cache（对照 0xSero TP2=48 并发）
+- [ ] **MTP vs DFlash2 在 xfc 工具轴的结构化输出正确性**（vocab 腐蚀检查）
+- [ ] **容量规划**：48 并发最优座位数 + 10-15% 余量（避抢占级联，对照 syv-ai）
+- [ ] **FP8 KV（逐头）256K 下的 ruler 质量**（长上下文误差可控性）
+- [ ] **vLLM vs SGLang 同条件 A/B**（长上下文 decode / 高并发聚合 / multi-LoRA，裁决 14.8 分工）
+- [ ] **CPU HiCache × 503GB** 对大池 re-prefill 的消解率（SGLang 侧，对照 §13.6）
