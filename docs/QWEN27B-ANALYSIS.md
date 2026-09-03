@@ -939,10 +939,11 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 
 - **采用** SGLang 0.5.10 TP2（GPU6/7）替代 4 副本 llama.cpp（GPU0-3）。
 - **默认配置（吞吐优先，non-MTP）**：
-  `--tp 2 --mem-fraction-static 0.90 --context-length 262144 --kv-cache-dtype fp8_e4m3 --max-running-requests 8 --chunked-prefill-size 8192 --mamba-scheduler-strategy auto --mamba-ssm-dtype float32 --disable-custom-all-reduce`（聚合 293，单请求上限 ~217K[非 256K，见 §15.5 更正注]，单流 34.8）。
+  `--tp 2 --mem-fraction-static 0.90 --context-length 262144 --kv-cache-dtype fp8_e4m3 --max-running-requests 8 --chunked-prefill-size 8192 --mamba-scheduler-strategy auto --mamba-ssm-dtype float32 --disable-custom-all-reduce --reasoning-parser qwen3`（聚合 293，单请求上限 ~217K[非 256K，见 §15.5 更正注]，单流 34.8）。
 - **延迟配置（可选切换，MTP/NEXTN）**：在上面基础上改 `--mamba-scheduler-strategy extra_buffer`、`--mem-fraction-static 0.85`，加 `--speculative-algorithm NEXTN --speculative-num-steps 1 --speculative-eagle-topk 1 --speculative-num-draft-tokens 1`，env `SGLANG_ENABLE_SPEC_V2=1`（单流 67.8，聚合 210）。
 - **迁移步骤**：SGLang 常驻 GPU6/7 → OpenResty `qwen27b-lb` upstream 4→2 → **24h 生产验证**（聚合/单流/长上下文/质量四轴）→ 通过后释放 GPU0-3。
 - **迁移执行记录（2026-09-03）**：① SGLang 必须**容器化**到 `qwen27b_default` 网络（`sglang-prod`，GPU6/7，`--shm-size 16g` 解 NCCL，`CUDA_VISIBLE_DEVICES=0,1` 应对容器内 GPU 重编号，容器内 `apt` 装 python3.12——venv 符号链接指向 `/usr/bin/python3.12`）——宿主防火墙（iptables INPUT, root-only）阻断一切容器→宿主流量，容器间通信不受影响；② OpenResty `/` 改静态 `set $backend "sglang-prod:30000"`（变量式走 docker DNS，容器重启 IP 变化自动跟随），原 route.lua 4 副本路由备份 `lb/qwen27b.conf.bak-20260903`，秒级可回退；③ 四轴经 LB 复测（2026-09-03 07:5x）：聚合 **290**(c24) / 单流 **33.8** / 长文 **198.9K** 容纳 / 质量 OK——与 A/B 基线一致；④ 浸泡采样 `soak-sglang.py`（5min 采样健康/延迟/GPU/错误 → `soak-sglang-20260903.log`）；⑤ 容器 `--restart unless-stopped`；⑥ GPU0-3 llama 副本保持运行（热备 + coding-v1 评测），浸泡通过后逐个释放给训练。
+- **补充修复（2026-09-03）：思考泄漏**——SGLang 0.5.10 默认不解析本模型（qwen3_5）的思考标记（字面 `</think>` 收尾、无开标记），思考文本连同 `</think>` 漏进 `content`（`reasoning_content` 为 None），ZCode 等工具端看到括号垃圾；llama.cpp 则正确拆出 `reasoning_content`。修复：启动加 `--reasoning-parser qwen3`（匹配 `(<think>)*(.*)</think>`，开标记可选）。验证：OpenAI chat `content` 干净 + `reasoning_content` 有值；Anthropic `/v1/messages` 仅返回干净 text 块。
 - **回退**：llama.cpp 4 副本镜像 + iq4_xs 权重保留，异常时 OpenResty upstream 2→4 秒级切回。
 
 ### 15.8 训练侧：释放后 6 卡适配 4090（sm_89）
