@@ -937,6 +937,8 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 
 ### 15.7 决策：2 卡 SGLang 生产（替代 4 副本 llama.cpp）
 
+> **⚠ 已被 §15.12 反转（2026-09-03）**：生产实测发现 SGLang 0.5.10 的 Anthropic 协议（agent 编程工具必需）有致命缺口（无结构化 tool_use），已回归 llama.cpp 并停用 SGLang。本节决策基于纯吞吐 A/B，未覆盖 agent 集成维度。
+
 - **采用** SGLang 0.5.10 TP2（GPU6/7）替代 4 副本 llama.cpp（GPU0-3）。
 - **默认配置（吞吐优先，non-MTP）**：
   `--tp 2 --mem-fraction-static 0.90 --context-length 262144 --kv-cache-dtype fp8_e4m3 --max-running-requests 8 --chunked-prefill-size 8192 --mamba-scheduler-strategy auto --mamba-ssm-dtype float32 --disable-custom-all-reduce --reasoning-parser qwen3`（聚合 293，单请求上限 ~217K[非 256K，见 §15.5 更正注]，单流 34.8）。
@@ -979,3 +981,15 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 - **T1（本机实测，可复现）**：§15.5 全部数字——同脚本/同提示/同硬件；脚本 `/data/sglang/ab_bench.py` + `agg_bench.py`，日志 `/tmp/sgl_*.log`，结果 `/tmp/ab_*.json`。
 - **T2（本机实测 + 社区方向）**：§15.4 根因（本机复现锁定）、§15.2 三引擎定位（社区 + 本机部署事实）。
 - **T3（外推 / 未复现 / 未部署）**：§14.6 的 115-130 单流外推（本机未复现，见 §15.5）；vLLM 数字（未部署，仅社区参照）。
+
+
+### 15.12 生产回归：弃用 SGLang，回到 llama.cpp（2026-09-03，决策反转）
+
+- **反转原因（真实负载实测）**：:8000 的真实生产负载是 **agentic AI 编程工具（ZCode 等，Anthropic `/v1/messages` 协议）**，SGLang 0.5.10 在该协议上存在集成缺口：
+  1. 思考泄漏：qwen3_5 思考文本 + 字面 `</think>` 漏进 `content`（`reasoning_content` 空）→ `--reasoning-parser qwen3` 修复（仅 OpenAI 端）；Anthropic 端无结构化 thinking 块。
+  2. **Anthropic 工具调用残缺（致命）**：`/v1/messages` 即使带 tools 数组仍返回**原始 `<tool_call>` XML 文本**（无结构化 `tool_use` 块、`stop_reason` 错为 end_turn）→ agent 无法执行工具。
+  3. 对照 llama.cpp b10715：同请求返回**结构化 `thinking` + `tool_use` 块**（实测 8081）→ 编程工具集成完整。
+- **取舍结论**：SGLang 2 卡聚合 290 tok/s 胜出，但本机真实负载（agentic 编程工具）的刚需是 **API 兼容层完整性**（OpenAI+Anthropic 双协议、thinking/tool_use/流式），这正是 llama.cpp b10715 的强项。→ **生产回归 llama.cpp 4 副本，SGLang 停用**；SGLang 的并发吞吐优势在本负载上无意义（单用户交互 + agent 串行）。
+- **执行（零停机）**：① LB `qwen27b.conf` 恢复 llama 4 副本路由（备份 `qwen27b.conf.bak-sglang-20260903` 可回退）→ nginx 优雅 reload 不掉连接 → 验证 :8000 回 llama（模型 `qwen3.8-27b`，content 干净，chat/anthropic thinking+tool_use 结构化）；② 停 soak 采样器（soak-sglang.py）；③ `docker stop/rm sglang-prod` → **GPU6/7 释放**。现 GPU0-3 = llama coding-v1（生产），GPU4-7 空闲可训练。
+- **SGLang 经验沉淀（可复用）**：容器化配方（qwen27b_default 网络、GPU 重编号 CUDA_VISIBLE_DEVICES=0,1、`--shm-size 16g` 解 NCCL、venv python3.12）、FP8 `is_layer_skipped` 边界匹配修复（§15.4）、KV 池 216,938 上限（~217K 单请求）、`--reasoning-parser qwen3`。
+- **vLLM 评估（下一步候选）**：[bowmanslayer/Qwen3.8-27B-Uncensored-W4A16-vision-mtp](https://huggingface.co/bowmanslayer/Qwen3.8-27B-Uncensored-W4A16-vision-mtp)（AutoRound W4A16 + 视觉 + MTP，19GB，qwen3_5）作者验证 vLLM 0.20.2 TP2（2×3090）：`--enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser qwen3` **内置**（无 SGLang 集成缺口），KV 池 415K，单流 66-68 tok/s——装新版 vLLM 后可用 GPU4/5 实测替代方案。
