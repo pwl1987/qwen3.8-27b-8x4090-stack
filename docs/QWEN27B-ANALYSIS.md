@@ -993,3 +993,13 @@ SGLang 链（每候选）：生成(SGLang 专用实例) → 过滤 → QLoRA →
 - **执行（零停机）**：① LB `qwen27b.conf` 恢复 llama 4 副本路由（备份 `qwen27b.conf.bak-sglang-20260903` 可回退）→ nginx 优雅 reload 不掉连接 → 验证 :8000 回 llama（模型 `qwen3.8-27b`，content 干净，chat/anthropic thinking+tool_use 结构化）；② 停 soak 采样器（soak-sglang.py）；③ `docker stop/rm sglang-prod` → **GPU6/7 释放**。现 GPU0-3 = llama coding-v1（生产），GPU4-7 空闲可训练。
 - **SGLang 经验沉淀（可复用）**：容器化配方（qwen27b_default 网络、GPU 重编号 CUDA_VISIBLE_DEVICES=0,1、`--shm-size 16g` 解 NCCL、venv python3.12）、FP8 `is_layer_skipped` 边界匹配修复（§15.4）、KV 池 216,938 上限（~217K 单请求）、`--reasoning-parser qwen3`。
 - **vLLM 评估（下一步候选）**：[bowmanslayer/Qwen3.8-27B-Uncensored-W4A16-vision-mtp](https://huggingface.co/bowmanslayer/Qwen3.8-27B-Uncensored-W4A16-vision-mtp)（AutoRound W4A16 + 视觉 + MTP，19GB，qwen3_5）作者验证 vLLM 0.20.2 TP2（2×3090）：`--enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser qwen3` **内置**（无 SGLang 集成缺口），KV 池 415K，单流 66-68 tok/s——装新版 vLLM 后可用 GPU4/5 实测替代方案。
+
+
+### 15.13 vLLM 实测：Qwen3.8-27B-Uncensored-W4A16-vision-mtp（2026-09-03）
+
+- **部署**：[bowmanslayer/Qwen3.8-27B-Uncensored-W4A16-vision-mtp](https://huggingface.co/bowmanslayer/Qwen3.8-27B-Uncensored-W4A16-vision-mtp)（AutoRound W4A16 + 视觉塔 + MTP 头，19GB），**vLLM 0.20.2**（GitHub release `+cu129` wheel）GPU4/5 TP2，`--served-model-name qwen3.8-27b-uncensored`，端口 9411。
+- **性能（2×4090 PCIe TP2）**：聚合 c8 **325** / c16 **573** / c24 **468 tok/s**（远超 SGLang 293 / llama ~130；W4A16 Marlin 4-bit 解码优势）；单流 decode ~69 tok/s；TTFT ~4.5s（短提示）；视觉读图正确；KV 池远超 262K 上限。
+- **引擎能力（vLLM vs SGLang 0.5.10 的关键差异）**：OpenAI 工具调用**结构化 `tool_calls`** ✓；**Anthropic `/v1/messages` 原生支持**——`thinking` + `tool_use` 块都结构化（带 signature）✓ → **没有 SGLang 0.5.10 的 agent 集成缺口**，ZCode 类工具可直接接。
+- **部署坑（可复用）**：① pypi 默认 vllm wheel 是 **cu13**（驱动 550 起不来）→ 用 release 资产 `+cu129` wheel（CUDA 12 主版本兼容，550 可跑，torch 2.11.0+cu129）；② `python -m vllm.entrypoints.openai.api_server` 不认位置参数 → 必须 `--model` 显式传（否则落回默认 Qwen3-0.6B）；③ 宿主缺 Python.h → `CPATH=/home/lytv/miniforge3/envs/torch/include/python3.12`（triton 编译用）；④ `VLLM_ALLOW_LONG_MAX_MODEL_LEN=1`（重打包 config 的 max_position 误读 40960）；⑤ HF 网络：`HF_ENDPOINT=hf-mirror.com` + `HF_HUB_OFFLINE=1`；⑥ wheel 下载 GitHub 直连慢 → ghfast.top 代理。
+- **⚠ 关键配置教训（本模型）**：`--reasoning-parser qwen3` 配此模型会**吞掉所有长思考输出**（该模型不规律地不闭合 `</think>`，parser 缓冲到截断全丢 → content 空）——**必须关 reasoning parser**；`--tool-call-parser qwen3_coder` + `--enable-auto-tool-choice` 无问题（结构化 tool_calls 1-2s）。`enable_thinking=false` 不被其模板支持。**模型特质**：uncensored/abliterated 回答常带英文"自言自语"规划前缀（非 vLLM 问题）；编码等实质任务需大 max_tokens（建议 4000+）。
+- **ZCode/编程工具接入**：Base URL `http://10.30.51.13:9411`，模型 `qwen3.8-27b-uncensored`，上下文窗口建议 128K（工具 parser 已就绪，可直接 agent 工具流）。
