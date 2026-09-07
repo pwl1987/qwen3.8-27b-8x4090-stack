@@ -40,7 +40,7 @@ cp .env.example .env && docker compose up -d
 
 1. **262K 显存墙**：int8 头比上游 W4 头重 ~1GB，262,144 档在首请求/长 prefill 死于 42MB 级动态分配（FLA 内核碎片缘）；240K 靠 KV 5.26→4.86GB + CG 1400→1000MiB 配平。
 2. **int4 lm_head 质量死刑**：4 轮校准（预填/解码 × g64/g128，cos 最高 0.9992）均留确定性退化——后训 lm_head 对 int4 敏感，速度上又无收益（步速本已持平），**不要再用**。
-3. **adaptive×前缀缓存损坏**（上游栈已知 bug，已复测 4/12 残差中招）：`LOOKUP=1`+adaptive 长块+前缀缓存命中的第二轮输出会确定性错乱；`ADAPTIVE=0` 干净但增益归零。检测工具：`../eval/p0/multi_residue_test.py`。
+3. **adaptive×前缀缓存损坏**（上游栈已知 bug，已复测 4/12 残差中招）：`LOOKUP=1`+adaptive 长块+前缀缓存命中的第二轮输出会确定性错乱；`ADAPTIVE=0` 干净但增益归零。检测工具：`../../eval/vllm/p0/multi_residue_test.py`。
 4. **GPU_UTIL 敏感性**：0.93（栈默认）与 0.95 的内存布局差异足以开关 lookup/adaptive 通道的可用性——A/B 时必须钉死。
 5. **250W 功耗墙仅 -1.5% decode**（显存带宽型负载），无需为性能放宽日间限功。
 6. `/metrics` 计数器带 `vllm:` 前缀——解析时锚定错了会得到全 NA 的 tok/step（本文档的很多"结论"曾被它坑过一轮）。
@@ -48,5 +48,5 @@ cp .env.example .env && docker compose up -d
 ## 测量口径
 
 - decode 夹具：`bench/ulmus_validate.py --benchmark --profile t3 --prefill-target 4096`（p565/g512，流式首末 token 计时，3 次中位）
-- 步速/接受率分解：`../eval/p0/bench_step.py <port>`（单请求隔离 + /metrics 差分 + 按位置接受剖面）
-- 完整实验日志与技术结论：`../docs/VLLM-OPTIMIZATION.md`
+- 步速/接受率分解：`../../eval/vllm/p0/bench_step.py <port>`（单请求隔离 + /metrics 差分 + 按位置接受剖面）
+- 完整实验日志与技术结论：`../../docs/VLLM-OPTIMIZATION.md`

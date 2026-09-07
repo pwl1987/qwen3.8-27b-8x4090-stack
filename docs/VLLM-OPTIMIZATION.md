@@ -48,7 +48,7 @@ FLA 碎片缘）→ **130.3 定型**。三级认证：5 探针质量 / 满窗 24
   ≥249856 档打开 lookup/adaptive 16-长块通道；245760 档（栈默认！）落在饿死 drafter 的几何上。
 - **171.6 档五要素**：249856 + LOOKUP=1 + adaptive + GPU_UTIL=0.93 + 前缀缓存——缺一回落 122-128。
   **不可生产**：①adaptive×前缀缓存第二轮确定性输出损坏（12 残差矩阵 4 组中招，检测脚本
-  `eval/p0/multi_residue_test.py`）；②贴 OOM 悬崖（42MB 分配即亡）；③ADAPTIVE=0 / U95 / PC0 等一切
+  `eval/vllm/p0/multi_residue_test.py`）；②贴 OOM 悬崖（42MB 分配即亡）；③ADAPTIVE=0 / U95 / PC0 等一切
   正确性或稳定性修复都消灭增益。归上游修复项。
 - **功耗墙**：250W 日间限功对 decode 仅 -1.5%（显存带宽型负载不敏感，负载 ~298W 无降频）。
 
@@ -63,7 +63,7 @@ FLA 碎片缘）→ **130.3 定型**。三级认证：5 探针质量 / 满窗 24
 
 | 工具 | 用途 |
 |---|---|
-| `eval/p0/bench_step.py <port>` | 单请求隔离步速分解（tok/s / tok/step / ms/step / 按位置接受剖面） |
-| `eval/p0/multi_residue_test.py <port>` | 12 残差前缀命中正确性门（adaptive 损坏检测） |
-| `eval/p0/run.sh` + `arms/` | 单变量 A/B 试验机（.env 重生成 + 独立 compose 项目 + 夹具 + 计数器差分） |
-| `eval/p0/compose.p0.yaml` | 沙箱双引擎样板（`!override` 换卡） |
+| `eval/vllm/p0/bench_step.py <port>` | 单请求隔离步速分解（tok/s / tok/step / ms/step / 按位置接受剖面） |
+| `eval/vllm/p0/multi_residue_test.py <port>` | 12 残差前缀命中正确性门（adaptive 损坏检测） |
+| `eval/vllm/p0/run.sh` + `arms/` | 单变量 A/B 试验机（.env 重生成 + 独立 compose 项目 + 夹具 + 计数器差分） |
+| `eval/vllm/p0/compose.p0.yaml` | 沙箱双引擎样板（`!override` 换卡） |

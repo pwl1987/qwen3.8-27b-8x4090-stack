@@ -8,7 +8,7 @@
 | `multi_residue_test.py` | `python3 multi_residue_test.py <port>` | **12 残差前缀命中正确性门**：两文档 × 6 个截断长度，暖命中轮 vs 冷盐轮逐字节对比。用于检测 adaptive 块长 × 前缀缓存的确定性输出损坏（实测可抓到 4/12 中招） |
 | `prefix_hit_test.py` | `python3 prefix_hit_test.py <port>` | 单残差快速版（冒烟） |
 | `run.sh` | `source run.sh; test_cfg <label> <env文件>` | 单变量试验机：写 `.env` → 独立 compose 项目 recreate → 等健康 → 步速分解 + `ulmus_validate.py` t3 夹具中位 + 计数器差分 → 追加 results.tsv |
-| `compose.p0.yaml` | 与主 compose 叠加（`-p <项目名> -f compose.yaml -f compose.p0.yaml`） | 沙箱引擎样板：`!override` 换卡换端口，不碰生产 |
+| `compose.p0.yaml` | 与主 compose 叠加（`-p <项目名> -f inference/vllm/compose.yaml -f compose.p0.yaml`） | 沙箱引擎样板：`!override` 换卡换端口，不碰生产 |
 | `arms/*.env` | — | 归因实验的各臂环境文件（A1 参照复刻 / A3 现产复刻 / A8c 系列 249856+lookup 判别链），留作复现模板 |
 | `results.tsv` | — | 当日 20+ 臂原始结果 |
 

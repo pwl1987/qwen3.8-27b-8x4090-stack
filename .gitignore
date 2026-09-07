@@ -22,9 +22,9 @@ eval/rulers/outputs/
 .venv/
 
 # vllm 栈大文件不入库
-vllm/models/
-vllm/cache/
-vllm/build.log
-vllm/.env
+inference/vllm/models/
+inference/vllm/cache/
+inference/vllm/build.log
+inference/vllm/.env
 *.pt
 __pycache__/
