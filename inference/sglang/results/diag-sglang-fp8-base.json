@@ -1,0 +1,166 @@
+{
+ "tag": "diag-sglang-fp8-base",
+ "model": "qwen3.8-27b",
+ "endpoint": "http://127.0.0.1:8000/v1",
+ "date": "2026-09-03 07:52:01",
+ "axes": {
+  "humaneval": {
+   "pass_at_1": 0.9,
+   "passed": 27,
+   "total": 30,
+   "results": [
+    {
+     "task_id": "HumanEval/0",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/1",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/2",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/3",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/4",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/5",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/6",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/7",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/8",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/9",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/10",
+     "pass": false,
+     "detail": "error: HTTPConnectionPool(host='127.0.0.1', port=8000): Read timed out. (read timeout=60)"
+    },
+    {
+     "task_id": "HumanEval/11",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/12",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/13",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/14",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/15",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/16",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/17",
+     "pass": false,
+     "detail": "error: HTTPConnectionPool(host='127.0.0.1', port=8000): Read timed out. (read timeout=60)"
+    },
+    {
+     "task_id": "HumanEval/18",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/19",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/20",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/21",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/22",
+     "pass": false,
+     "detail": "NameError: name 'Any' is not defined. Did you mean: 'any'?"
+    },
+    {
+     "task_id": "HumanEval/23",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/24",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/25",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/26",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/27",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/28",
+     "pass": true,
+     "detail": "ok"
+    },
+    {
+     "task_id": "HumanEval/29",
+     "pass": true,
+     "detail": "ok"
+    }
+   ],
+   "seconds": 272.4
+  }
+ }
+}

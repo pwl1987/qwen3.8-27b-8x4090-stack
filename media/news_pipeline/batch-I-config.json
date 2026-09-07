@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "_doc": "批次I 全部阈值唯一真源。config 内容参与 stage fingerprint（news_pipeline 哈希本文件）；改阈值自动失效相关缓存。权重初值取 v4 已验证配比，后续只按 0904 错误分布调，且 0905 不回退才保留。",
+  "frame_domain": {
+    "dur_tol_s": 0.05,
+    "av_tol_s": 0.5,
+    "max_fps": 1000
+  },
+  "signal": {
+    "frame_sig": {
+      "hist_bins": 64,
+      "gray_downscale": 320,
+      "local_window_s": 8.0,
+      "mad_epsilon": 1e-06,
+      "audio_hop_ms": 10,
+      "stability_k_frames": 12,
+      "stability_min_z": 1.0,
+      "recovery_frames": 6,
+      "recovery_ratio": 0.5
+    },
+    "gradual": {
+      "siglip_elev_z": 1.5,
+      "siglip_plateau_s": 2.0,
+      "luma_ramp_min_s": 0.3,
+      "luma_ramp_max_ms": 2000,
+      "dissolve_ramp_frames": 12
+    }
+  },
+  "candidate": {
+    "peak_min_z": 3.0,
+    "silence_rms_ratio": 0.25,
+    "cluster_frames": 8,
+    "windows_ms": {
+      "shot_prior": 1500,
+      "ocr_prior": 4000,
+      "word": 750,
+      "silence": 750,
+      "semantic": 2000
+    },
+    "ocr": {
+      "static_doc_freq": 0.25,
+      "min_title_len": 6,
+      "provisional_samples": 1,
+      "highconf_samples": 2,
+      "chyron_suffixes": [
+        "部长",
+        "局长",
+        "主任",
+        "书记",
+        "县长",
+        "镇长",
+        "队长",
+        "教练",
+        "负责人",
+        "组长",
+        "店长",
+        "行长",
+        "校长",
+        "院长",
+        "队员",
+        "骑手",
+        "医生",
+        "教师",
+        "发言人",
+        "记者",
+        "编辑",
+        "演员",
+        "导演",
+        "经理",
+        "采购商",
+        "商户",
+        "组长",
+        "调研员",
+        "书记员"
+      ],
+      "chyron_station_re": "[\\u4e00-\\u9fa5]{2}台[\\u4e00-\\u9fa5]{2,4}"
+    }
+  },
+  "shot": {
+    "min_shot_s": 1.5,
+    "refractory_s": 1.5,
+    "score_weights": {
+      "hist": 1.0,
+      "pixel": 1.0,
+      "gradual": 0.8,
+      "recovery": 0.6,
+      "shot_prior": 0.5
+    }
+  },
+  "story": {
+    "min_semantic_unit_s": 20.0,
+    "refractory_s": 20.0,
+    "hysteresis_confirm_s": 5.0,
+    "long_story_scan_s": 120.0,
+    "lead_in_title_window_s": 45.0,
+    "recap_zone_s": 180.0,
+    "duration_prior_s": {
+      "very_short": 20,
+      "normal": 120,
+      "long": 240,
+      "very_long": 400
+    },
+    "llm_window_s": [
+      10,
+      20
+    ],
+    "positive_weights": {
+      "title_change": 1.0,
+      "semantic_change": 1.0,
+      "topic_change": 0.7,
+      "speaker_change": 0.6,
+      "acoustic_transition": 0.4
+    },
+    "negative_weights": {
+      "same_title": 0.7,
+      "same_topic": 0.9,
+      "same_speaker": 0.5,
+      "no_acoustic_break": 0.3,
+      "mid_word": 1.0
+    },
+    "anchor_requires_agree": 3,
+    "strong_requires_agree": 2
+  },
+  "semantic": {
+    "model": "/data/models/Qwen3.5-2B",
+    "port": 8010,
+    "temperature": 0,
+    "max_tokens": 256,
+    "seed": 20260906,
+    "veto_midword_ms": 60,
+    "escalate_27b_on_ambiguous": true,
+    "llm_27b_url": "http://127.0.0.1:8000/v1/chat/completions",
+    "llm_27b_model": "qwen3.8-27b"
+  },
+  "validation": {
+    "words_coverage_min": 0.97,
+    "ffprobe_dur_tol_ms": 50,
+    "frame_probe_offsets": [
+      0,
+      1,
+      -2,
+      -1
+    ],
+    "probe_mid": true,
+    "fade_exempt_ms": 30,
+    "ssim_min": 0.8,
+    "gpus_allowed": [
+      2,
+      3
+    ],
+    "gpu_min_free_mib": 10240,
+    "min_story_export_check": 2
+  }
+}

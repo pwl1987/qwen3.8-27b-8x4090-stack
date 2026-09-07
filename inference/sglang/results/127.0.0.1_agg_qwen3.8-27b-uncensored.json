@@ -1,0 +1,1 @@
+{"c8": {"concurrency": 8, "n_req": 8, "n_ok": 8, "wall_s": 2.41, "total_tok": 784, "agg_tps": 325.4, "per_req_tps_mean": 40.7, "fails": []}}

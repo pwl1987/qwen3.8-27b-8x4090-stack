@@ -1,0 +1,26 @@
+# ComfyUI + MiniMax-H3 —— GPU2/3 双4090, 加入 qwen27b_default 网络供 mon 探活
+# 回滚: docker compose down && docker rmi comfyui:minimax-h3 && sudo ufw delete allow 8188/tcp
+# 单卡回退: command 行去掉 --cuda-multi, device_ids 改 ['3'] (503G RAM 自动 offload)
+services:
+  comfyui:
+    build: .
+    image: comfyui:minimax-h3
+    container_name: comfyui
+    restart: unless-stopped
+    user: "1000:1000"           # 产物文件宿主可直接管理(否则 root 属主难删除)
+    gpus:
+      - driver: nvidia
+        device_ids: ['2', '3']
+    ports:
+      - "8188:8188"          # 浏览器入口, ufw 已放行
+    volumes:
+      - ./models:/app/ComfyUI/models
+      - ./output:/app/ComfyUI/output
+      - ./user:/app/ComfyUI/user
+    networks:
+      - qwen27b_default
+    command: ["--cuda-device", "0,1"]   # 多卡实例; 单卡回退改 "0"; sageattention 实测更慢已弃用(包保留)
+
+networks:
+  qwen27b_default:
+    external: true

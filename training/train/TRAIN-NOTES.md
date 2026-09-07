@@ -542,7 +542,7 @@ needle 10/10+10/10 天花板 / longgen 44.6+44.1 两跑满长 (同日同形态 A
 - **性能基线（T1.3）**：decode 126.9 tok/s（p565/g512 中位）vs 生产 llama.cpp 90.1 = **1.41×**；prefill 2535 tok/s @p32817。低于 Huihui 的 175.4（归因待 T 系列：权重 19 vs 16GB/128K 配置差异）。
 - **质量 A/B（T1.1）初判**：10 任务双端，A(vLLM) 快 2-5×；4 个 0ch 全为测量口径问题（thinking 吃满 3072 max_tokens），9/10 有效产出存 quality_ab_result.json 待人工评分。复核时统一 enable_thinking 显式+max_tokens 8192。
 - **周边池（S2 提前）**：GPU5=embed(:19623)+rerank(:19624)、GPU7=Qwen3-VL-8B(:19625) 全在线。reranker 正确姿势=--runner pooling+--hf-overrides(SeqCls+classifier_from_token["no","yes"])+--chat-template qwen3_reranker.jinja（缺模板则无区分度）。E2E 检索已验证（中文查询→精准命中，检索+重排 0.06-0.08s）。
-- **素材预置（详见 /data/datasets/MEDIA-TEST-MANIFEST.md）**：临沂广电媒资 API 全通道打通（DES-ECB 密钥 <已脱敏-见内部密码库>→api.<内网域名>/private/login；列表=msadmin /cms/video 分页渲染；详情=/cms/video/{id} JSON）；60 条元数据+25 条分条 MP4+18 条拆条 ground truth（lytv_storysplit_groundtruth.json，M7 黄金集）+电台MP3+直播双流录制（Python HLS 录制器，ffmpeg 静态版对 lytv HLS segfault）+KeSpeech 3.3G（临沂=中原官话区，中原子集升重点）。
+- **素材预置（详见 /data/datasets/MEDIA-TEST-MANIFEST.md）**：临沂广电媒资 API 全通道打通（DES-ECB 密钥 <已脱敏>→api.<内网域名>/private/login；列表=msadmin /cms/video 分页渲染；详情=/cms/video/{id} JSON）；60 条元数据+25 条分条 MP4+18 条拆条 ground truth（lytv_storysplit_groundtruth.json，M7 黄金集）+电台MP3+直播双流录制（Python HLS 录制器，ffmpeg 静态版对 lytv HLS segfault）+KeSpeech 3.3G（临沂=中原官话区，中原子集升重点）。
 
 ## 2026-09-06 晚 上下文阶梯实测 + 262K 全速攻关（含一次事故与恢复）
 - **阶梯（同夹具 p565/g512）**：128K DFlash2=126.9 | **192K DFlash2=115.4（当前部署）** | 262K 原生MTP=84.3 | 262K DFlash2=启动过但首请求 OOM（KV 池 272,781 tokens 与 Huihui 成功运行完全相同，差在 FLA 内核 2MB 动态分配=碎片边缘）。

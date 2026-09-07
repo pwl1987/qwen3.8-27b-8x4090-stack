@@ -31,7 +31,7 @@
 │   │   ├── lb/                     # qwen27b.conf + route.lua（会话粘滞/满载漂移/大小会话分流）
 │   │   └── build/
 │   │       └── cu124-driver550/    # CUDA 12.4 / 驱动 550 时代构建配方（生产现役 b10715）
-│   └── vllm/                       # —— vLLM 单卡高速通道（基于 syv-ai/qwen38-27b-rtx3090 改造, Apache-2.0）
+│   ├── vllm/                       # —— vLLM 单卡高速通道（基于 syv-ai/qwen38-27b-rtx3090 改造, Apache-2.0）
 │       ├── compose.yaml            # 生产 compose（单卡 :19622, OpenAI 兼容）
 │       ├── .env.example            # 终配模板（240K + DFlash2 k=7 + 重校准 drafter, 已认证）
 │       ├── compose.int8ab.yaml     # 双引擎 A/B 样板（!override 换卡换端口）
@@ -41,6 +41,14 @@
 │       └── build/
 │           ├── cu129-driver550/    # CUDA 12.9 镜像配方说明（0.27.1-cu129, 生产现役）
 │           └── cu130-driver580/    # vLLM 0.28 + CUDA13 原生环境五坑配方（驱动 580 时代）
+│   └── sglang/                     # —— SGLang 探索存档（已弃用：Anthropic 无结构化 tool_use，
+│                                   #    09-03 回归 llama.cpp；基准/巡检/FP8 诊断脚本保留）
+├── media/                          # ★ 媒体生产线（M 线）
+│   ├── comfyui-minimax-h3/         # ComfyUI+MiniMax-H3 视频生成（GPU2/3 按需）
+│   ├── services/                   # 检索/视觉周边池三容器（embed/rerank/VL-8B 可复现启动）
+│   ├── news_pipeline/              # 批次I 一键 11 阶段编目管线（P0-P4 全套+阈值真源）
+│   ├── serve/                      # 8 个 vLLM 服务启停脚本（vllm28-env 底座）
+│   └── docs/                       # RESULTS 滚动实测 / MODEL-PICKS 选型定案 / 素材清单
 ├── training/                       # ★ 后训练（与推理分离）
 │   ├── train/                      # QLoRA 训练（ms-swift + DeepSpeed, 4×4090）
 │   │   ├── run_train.sh / convert_data.py / ds_zero*.json / monitor.sh / smoke_test.py
@@ -58,6 +66,7 @@
 └── docs/
     ├── QWEN27B-ANALYSIS.md         # ★ 服务深度分析（权重解剖/量化配方/MTP 实测/§15 三引擎横评）
     ├── VLLM-OPTIMIZATION.md        # ★ vLLM 生产线实验日志（S1→S1.8: 量化/头部判死/drafter/T系列/P0 归因）
+    ├── PROBLEMS-AND-FIXES.md      # ★ 问题→解决全记录（P1-P59 + 六条通用教训，08-28→09-07 全程）
     └── ROADMAP.md                  # ★ 后续优化设计构想（adaptive 修复→+32% / drafter 重训蓝图 / 0.28 迁移 / 262K）
 ```
 
