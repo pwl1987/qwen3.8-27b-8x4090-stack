@@ -7,14 +7,16 @@ import json, os, re, shutil, socket, subprocess, threading, time, urllib.request
 from collections import deque
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
-BACKENDS = [('llama', 'llama', 8081), ('r1', 'r1', 8082), ('r2', 'r2', 8083), ('r3', 'r3', 8084)]
+BACKENDS = [('llama', 'llama', 8081), ('r1', 'r1', 8082)]   # 2026-09-05 缩容双卡(r2/r3 已停)
 # 通用服务健康探活(compose 环境变量 MON_SERVICES="名字=URL,..." 同 docker 网可达), 如 ComfyUI=http://comfyui:8188/system_stats
 SERVICES = [tuple(x.split('=', 1)) for x in os.environ.get('MON_SERVICES', '').split(',') if '=' in x]
+# vLLM 服务(Prometheus 指标, compose 环境变量 MON_VLLM_URL 配置, 默认宿主机 docker 网桥 IP:9411)
+VLLM_URL = os.environ.get('MON_VLLM_URL', 'http://172.18.0.1:9411')
 WWW, DATA = '/www', '/www/data.json'
 HIST_FILE = '/www/hist/history.json'          # compose 挂载 ./mon/hist, 跨容器重建保留
 INTERVAL, HIST_STEP = 2, 10                    # 采样 2s; 历史聚合 10s
 HIST_KEEP = 24 * 3600 // HIST_STEP             # 8640 点 = 24h
-FIELDS = ['index', 'name', 'utilization.gpu', 'memory.used', 'memory.total', 'temperature.gpu', 'power.draw']
+FIELDS = ['index', 'name', 'utilization.gpu', 'memory.used', 'memory.total', 'temperature.gpu', 'power.draw', 'fan.speed', 'clocks.sm', 'clocks.mem']
 LB = 'http://lb:8000'
 
 def gpus():
@@ -27,11 +29,12 @@ def gpus():
     gs = []
     for line in out.stdout.strip().splitlines():
         p = [x.strip() for x in line.split(',')]
-        if len(p) < 7:
+        if len(p) < 10:
             continue
         gs.append({'index': int(p[0]), 'name': p[1], 'utilization_gpu': int(p[2]),
                    'memory_used': int(p[3]), 'memory_total': int(p[4]),
-                   'temperature_gpu': int(p[5]), 'power_w': round(float(p[6]))})
+                   'temperature_gpu': int(p[5]), 'power_w': round(float(p[6])),
+                   'fan': int(p[7]), 'sm_mhz': int(p[8]), 'mem_mhz': int(p[9])})
     return gs
 
 M_KEYS = ('prompt_tokens_total', 'prompt_tokens_cached_total', 'tokens_predicted_total',
@@ -172,6 +175,37 @@ def fetch_lb():
     with urllib.request.urlopen(LB + '/_lbstats', timeout=2) as r:
         return json.load(r)
 
+# ---------- vLLM 服务指标(Prometheus 文本格式) ----------
+
+def _vllm_metric(t, name, **labels):
+    # 从 Prometheus 文本里取某个指标的值(匹配 label 子集, label 可无), 取第一个
+    lab = ''.join(f'{k}="{v}",' for k, v in labels.items()) if labels else ''
+    m = re.search(rf'^{name}(?:\{{{lab}(?:[^}}]*)?\}})? ([0-9.eE+-]+)', t, re.M)
+    return float(m.group(1)) if m else None
+
+def fetch_vllm(now):
+    # 抓 /metrics, 解析运行中/排队请求、KV 缓存占用、prompt/生成 token 累计(→速率)、前缀缓存命中率、运行时长
+    with urllib.request.urlopen(VLLM_URL + '/metrics', timeout=3) as r:
+        t = r.read().decode()
+    prev = state.get('prev_vllm')
+    dt = now - prev[0] if prev else 0
+    prompt_total = _vllm_metric(t, 'vllm:prompt_tokens_total') or 0.0
+    gen_total = _vllm_metric(t, 'vllm:generation_tokens_total') or 0.0
+    pre_tps = max(0.0, (prompt_total - prev[1]['prompt_total']) / dt) if prev and dt > INTERVAL * 0.5 else 0.0
+    gen_tps = max(0.0, (gen_total - prev[1]['gen_total']) / dt) if prev and dt > INTERVAL * 0.5 else 0.0
+    state['prev_vllm'] = (now, {'prompt_total': prompt_total, 'gen_total': gen_total})
+    pq = _vllm_metric(t, 'vllm:prefix_cache_queries_total') or 0.0
+    ph = _vllm_metric(t, 'vllm:prefix_cache_hits_total') or 0.0
+    start_ts = _vllm_metric(t, 'process_start_time_seconds')
+    return {'ok': True,
+            'running': int(_vllm_metric(t, 'vllm:num_requests_running') or 0),
+            'waiting': int(_vllm_metric(t, 'vllm:num_requests_waiting') or 0),
+            'kv_cache_pct': round(_vllm_metric(t, 'vllm:kv_cache_usage_perc') or 0.0, 1),
+            'gen_tps': round(gen_tps, 1), 'pre_tps': round(pre_tps, 0),
+            'gen_total': int(gen_total), 'prompt_total': int(prompt_total),
+            'prefix_hit': round(100 * ph / pq, 1) if pq else 0.0,
+            'uptime_s': int(now - start_ts) if start_ts else None}
+
 def sysinfo(prev_cpu):
     # 宿主 CPU%/内存/负载(/host/proc 由 compose 挂载); 返回 (info, 新的累计cpu样本)
     def read_cpu():
@@ -276,8 +310,12 @@ def snapshot():
     except Exception:
         lb = None
     t = state['ttft']
+    try:
+        vllm = fetch_vllm(now)
+    except Exception as e:
+        vllm = {'ok': False, 'info': type(e).__name__}
     return {'ts': now, 'gpus': gpus(), 'reps': reps, 'total': tot, 'sys': si,
-            'lb': lb, 'procs': gpu_procs(), 'services': probe_services(),
+            'lb': lb, 'procs': gpu_procs(), 'services': probe_services(), 'vllm': vllm,
             'ttft': {'hot': t['hot'], 'hot_ts': t['hot_ts'],
                      'cold': t['cold'], 'cold_ts': t['cold_ts']}}
 
@@ -286,7 +324,8 @@ def snapshot():
 def make_acc():
     return {'n': 0, 'gen': 0.0, 'pre': 0.0, 'conc': 0, 'def': 0, 'cpu': 0.0,
             'cache': 0.0, 'mtp': 0.0, 'qps': None, 'mem': 0.0,
-            'ttft_h': None, 'ttft_c': None, 'g': []}
+            'ttft_h': None, 'ttft_c': None, 'g': [],
+            'vllm_gen': 0.0, 'vllm_run': 0, 'vllm_wait': 0, 'vllm_kv': 0.0, 'vllm_n': 0}
 
 def hist_push(d):
     a, n = state['acc'], 0
@@ -301,24 +340,36 @@ def hist_push(d):
     a['ttft_h'], a['ttft_c'] = d['ttft']['hot'], d['ttft']['cold']
     gs = a['g']
     while len(gs) < len(d['gpus']):
-        gs.append([0, 0, 0.0, 0, 0])      # [util_sum, n, mem_pct, temp_max, power_sum]
+        gs.append([0, 0, 0.0, 0, 0, 0, 0, 0])  # [util_sum, n, mem_pct, temp_max, power_sum, fan_sum, sm_sum, memclk_sum]
     for i, g in enumerate(d['gpus']):
         b = gs[i]
         b[0] += g['utilization_gpu']; b[1] += 1
         b[2] = round(100 * g['memory_used'] / g['memory_total'], 1)
         b[3] = max(b[3], g['temperature_gpu'])
         b[4] += g['power_w']
+        b[5] += g['fan']
+        b[6] += g['sm_mhz']
+        b[7] += g['mem_mhz']
+    v = d.get('vllm') or {}
+    if v.get('ok'):
+        a['vllm_gen'] += v['gen_tps']; a['vllm_n'] += 1
+        a['vllm_run'] = max(a['vllm_run'], v['running'])
+        a['vllm_wait'] = max(a['vllm_wait'], v['waiting'])
+        a['vllm_kv'] = v['kv_cache_pct']
 
 def hist_flush(ts):
     a = state['acc']
     if not a['n']:
         return
-    g = [[round(b[0] / b[1]), b[2], b[3], round(b[4] / b[1])] if b[1] else [0, 0, 0, 0] for b in a['g']]
+    g = [[round(b[0] / b[1]), b[2], b[3], round(b[4] / b[1]),
+          round(b[5] / b[1]), round(b[6] / b[1]), round(b[7] / b[1])] if b[1] else [0, 0, 0, 0, 0, 0, 0] for b in a['g']]
+    vg = round(a['vllm_gen'] / a['vllm_n'], 1) if a['vllm_n'] else 0
     state['hist'].append({
         'ts': int(ts), 'gen': round(a['gen'] / a['n'], 1), 'pre': round(a['pre'] / a['n']),
         'conc': a['conc'], 'def': a['def'], 'cache': a['cache'], 'mtp': a['mtp'],
         'qps': a['qps'], 'cpu': round(a['cpu'] / a['n'], 1), 'mem': a['mem'],
-        'th': a['ttft_h'], 'tc': a['ttft_c'], 'g': g})
+        'th': a['ttft_h'], 'tc': a['ttft_c'], 'g': g,
+        'vg': vg, 'vr': a['vllm_run'], 'vw': a['vllm_wait'], 'vk': a['vllm_kv']})
     state['acc'] = make_acc()
 
 def hist_load():

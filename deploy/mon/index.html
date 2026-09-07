@@ -106,6 +106,13 @@
   <div id="lbBars"></div>
 </div>
 
+<div class="panel" id="vllmPanel" style="display:none">
+  <div class="title">vLLM 服务（Qwen3.8-27B-Uncensored-W4A16 · TP=2 · GPU4+5 · :9411）</div>
+  <div class="lbgrid" id="vllmKpis"></div>
+  <div class="lbbar"><span>运行中请求</span><div class="tr"><i id="vllmRunBar"></i></div><b id="vllmRunTxt" style="color:var(--tx)"></b></div>
+  <div class="lbbar"><span>KV 缓存占用</span><div class="tr"><i id="vllmKvBar"></i></div><b id="vllmKvTxt" style="color:var(--tx)"></b></div>
+</div>
+
 <div class="panel" id="svcPanel" style="display:none">
   <div class="title">其他推理服务（compose 环境变量 MON_SERVICES 配置探活地址）</div>
   <div id="svcRows"></div>
@@ -117,7 +124,7 @@
 </div>
 
 <div class="grid" id="gpus"></div>
-<div class="foot">数据 2s 自动刷新 · KPI 曲线 5 分钟 · 历史趋势 10s 粒度保留 24h（重启不丢） · GPU0-3=模型副本 · GPU4-7=空闲预留 · TTFT 探测经 LB :8000（热=固定 prompt 走缓存 / 冷=唯一 prompt）</div>
+<div class="foot">数据 2s 自动刷新 · KPI 曲线 5 分钟 · 历史趋势 10s 粒度保留 24h（重启不丢） · GPU0-3=llama.cpp 副本 · GPU4+5=vLLM(TP=2) · GPU6-7=空闲预留 · TTFT 探测经 LB :8000（热=固定 prompt 走缓存 / 冷=唯一 prompt）</div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -131,7 +138,12 @@ const METRICS = {
   tp:   [['gen','生成 tok/s','#3fb950',0],['pre','prefill tok/s','#58a6ff',1]],
   cc:   [['conc','并发路数','#d29922',0],['def','排队路数','#f85149',0]],
   rq:   [['qps','QPS','#58a6ff',0],['th','TTFT热 s','#3fb950',1],['tc','TTFT冷 s','#d29922',1]],
+  vllm: [['vg','vLLM 生成 tok/s','#bc8cff',0],['vr','vLLM 运行请求','#39c5cf',0],['vk','vLLM KV缓存%','#d29922',1]],
   gpu:  PALETTE.map((c,i)=>[['g',i],'GPU'+i+' 利用率%',c,0]),
+  temp: PALETTE.map((c,i)=>[['gt',i],'GPU'+i+' 温度°C',c,0]),
+  fan:  PALETTE.map((c,i)=>[['gf',i],'GPU'+i+' 风扇%',c,0]),
+  freq: PALETTE.map((c,i)=>[['gs',i],'GPU'+i+' SM频率MHz',c,0]),
+  power:PALETTE.map((c,i)=>[['gp',i],'GPU'+i+' 功耗W',c,0]),
   sys:  [['cpu','宿主 CPU%','#58a6ff',0],['mem','内存%','#d29922',0]],
 };
 const fmtT = ts => new Date(ts*1000).toLocaleTimeString('zh-CN',{hour12:false});
@@ -171,8 +183,15 @@ function calcAlerts(d){
   // 热TTFT 需连续 2 次超 1s 才告警(LB/副本重启后偶发单次抖动不误报)
   if (d.ttft.hot != null && d.ttft.hot > 1) { if (++hotTtftBadStreak >= 2) a.push(['warn', `热TTFT ${d.ttft.hot}s（前缀缓存疑似失效）`]); }
   else hotTtftBadStreak = 0;
-  if (d.total.gen_tps > 0 && d.total.mtp_acc && d.total.mtp_acc < 55) a.push(['warn', `MTP 接受率 ${d.total.mtp_acc}%`]);
+  if (d.total.gen_tps > 0 && d.total.mtp_acc && d.total.mtp_acc < 40) a.push(['warn', `草稿接受率 ${d.total.mtp_acc}%`]);
   for (const s of d.services || []) if (!s.ok) a.push(['hot', `服务 ${s.name} 不可达`]);
+  const vv = d.vllm;
+  if (vv) {
+    if (vv.ok) {
+      if (vv.waiting >= 8) a.push(['warn', `vLLM 排队 ${vv.waiting} 路`]);
+      if (vv.kv_cache_pct >= 90) a.push(['warn', `vLLM KV缓存占用 ${vv.kv_cache_pct}%`]);
+    } else a.push(['hot', `vLLM 不可达 (${vv.info||'失败'})`]);
+  }
   // 副本重启: id_task 计数器归零 → 累计请求数骤降
   if (prevReqTotal != null && d.total.req_total < prevReqTotal) a.push(['warn', '检测到副本重启（请求计数已归零）']);
   prevReqTotal = d.total.req_total;
@@ -195,7 +214,8 @@ let CH = null;   // {pts, t0, w, h} 供 tooltip 定位
 
 function seriesVal(p, s){
   const k = s[0];
-  if (k === 'g') return (p.g && p.g[s[1]] && p.g[s[1]][0] != null) ? p.g[s[1]][0] : null;
+  const gidx = {g:0, gt:2, gp:3, gf:4, gs:5, gm:6};   // p.g[i] = [util, mem%, temp, power, fan, smMHz, memMHz]
+  if (k in gidx) return (p.g && p.g[s[1]] && p.g[s[1]][gidx[k]] != null) ? p.g[s[1]][gidx[k]] : null;
   return p[k];
 }
 function drawChart(){
@@ -307,7 +327,7 @@ $('chart').addEventListener('mouseleave', () => $('tip').style.display = 'none')
 // ---------- tabs ----------
 function renderTabs(){
   $('rangeTabs').innerHTML = RANGES.map(([n,v])=>`<span class="tab${v===range?' on':''}" data-r="${v}">${n}</span>`).join('');
-  $('metricTabs').innerHTML = [['tp','吞吐'],['cc','并发 · 排队'],['rq','请求 · 首字延迟'],['gpu','GPU 利用率'],['sys','宿主系统']]
+  $('metricTabs').innerHTML = [['tp','吞吐'],['cc','并发 · 排队'],['rq','请求 · 首字延迟'],['vllm','vLLM'],['gpu','GPU 利用率'],['temp','GPU 温度'],['fan','GPU 风扇'],['freq','GPU 频率'],['power','GPU 功耗'],['sys','宿主系统']]
     .map(([k,n])=>`<span class="tab${k===metric?' on':''}" data-m="${k}">${n}</span>`).join('');
 }
 document.addEventListener('click', e => {
@@ -329,9 +349,19 @@ $('btnCsv').addEventListener('click', () => {
   const pts = hist.filter(p => p.ts >= t0);
   if (!pts.length) { alert('当前范围暂无历史数据'); return; }
   const head = ['time','gen_tps','pre_tps','conc','deferred','cache%','mtp%','qps','cpu%','mem%','ttft_hot_s','ttft_cold_s',
-                ...Array.from({length:8},(_,i)=>'gpu'+i+'_util%')];
+                'vllm_gen_tps','vllm_run','vllm_wait','vllm_kv%',
+                ...Array.from({length:8},(_,i)=>'gpu'+i+'_util%'),
+                ...Array.from({length:8},(_,i)=>'gpu'+i+'_tempC'),
+                ...Array.from({length:8},(_,i)=>'gpu'+i+'_powerW'),
+                ...Array.from({length:8},(_,i)=>'gpu'+i+'_fan%'),
+                ...Array.from({length:8},(_,i)=>'gpu'+i+'_smFreqMHz')];
   const rows = pts.map(p => [fmtT(p.ts), p.gen, p.pre, p.conc, p.def, p.cache, p.mtp, p.qps, p.cpu, p.mem, p.th, p.tc,
-                ...Array.from({length:8},(_,i)=>p.g&&p.g[i]?p.g[i][0]:'')].join(','));
+                p.vg, p.vr, p.vw, p.vk,
+                ...Array.from({length:8},(_,i)=>p.g&&p.g[i]?p.g[i][0]:''),
+                ...Array.from({length:8},(_,i)=>p.g&&p.g[i]?p.g[i][2]:''),
+                ...Array.from({length:8},(_,i)=>p.g&&p.g[i]?p.g[i][3]:''),
+                ...Array.from({length:8},(_,i)=>p.g&&p.g[i]?p.g[i][4]:''),
+                ...Array.from({length:8},(_,i)=>p.g&&p.g[i]?p.g[i][5]:'')].join(','));
   const blob = new Blob(['\ufeff'+[head.join(','),...rows].join('\n')], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -380,7 +410,7 @@ async function tick(){
       kpi('首字延迟 · 热', th, '固定 prompt 缓存命中 · ' + ago(d.ttft.hot_ts), 'sth') +
       kpi('首字延迟 · 冷', tc, '唯一短 prompt · ' + ago(d.ttft.cold_ts)) +
       kpi('前缀缓存命中', d.total.cache_hit + '%', 'prompt token 复用比例') +
-      kpi('MTP 接受率', d.total.mtp_acc + '%', '投机解码草稿采纳比');
+      kpi('草稿接受率', d.total.mtp_acc + '%', 'DFlash2 投机解码采纳比 (accepted/drafted)');
 
     if (document.getElementById('sgen')) {
       spark($('sgen'), HIST.gen, '#3fb950');
@@ -408,6 +438,30 @@ async function tick(){
       }).join('');
     } else lp.style.display = 'none';
 
+    // vLLM 面板
+    const vvp = $('vllmPanel'), vv = d.vllm;
+    if (vv && vv.ok) {
+      vvp.style.display = '';
+      const up = vv.uptime_s != null ? `${Math.floor(vv.uptime_s/3600)}h ${Math.floor(vv.uptime_s%3600/60)}m` : '—';
+      const maxReq = 16;   // --max-num-seqs 16
+      $('vllmKpis').innerHTML =
+        `<div class="lbk">生成吞吐<b>${vv.gen_tps} tok/s</b></div>` +
+        `<div class="lbk">prefill 吞吐<b>${(vv.pre_tps/1000).toFixed(1)}K tok/s</b></div>` +
+        `<div class="lbk">排队请求<b>${vv.waiting}</b></div>` +
+        `<div class="lbk">前缀缓存命中<b>${vv.prefix_hit}%</b></div>` +
+        `<div class="lbk">累计生成<b>${vv.gen_total.toLocaleString()}</b></div>` +
+        `<div class="lbk">运行时长<b>${up}</b></div>`;
+      $('vllmRunBar').style.width = `${Math.min(100, 100*vv.running/maxReq)}%`;
+      $('vllmRunBar').style.background = vv.running >= maxReq ? 'var(--hot)' : 'var(--acc)';
+      $('vllmRunTxt').textContent = `${vv.running} / ${maxReq}`;
+      $('vllmKvBar').style.width = `${vv.kv_cache_pct}%`;
+      $('vllmKvBar').style.background = color(vv.kv_cache_pct);
+      $('vllmKvTxt').textContent = `${vv.kv_cache_pct}%`;
+    } else if (vv) {
+      vvp.style.display = '';
+      $('vllmKpis').innerHTML = `<div class="lbk" style="color:var(--hot)">服务不可达<b>${vv.info||''}</b></div>`;
+    } else vvp.style.display = 'none';
+
     const names = {llama:'qwen27b (GPU0)', r1:'r1 (GPU1)', r2:'r2 (GPU2)', r3:'r3 (GPU3)'};
     $('reps').innerHTML = Object.entries(d.reps).map(([k,v]) => {
       if (!v.ok) return `<div class="rep"><span class="dot down"></span><span class="rn">${names[k]||k}</span>
@@ -419,7 +473,7 @@ async function tick(){
         <div class="rrow"><span>prefill</span><b>${(v.pre_tps/1000).toFixed(1)}K tok/s</b></div>
         <div class="rrow"><span>并发${v.deferred?` (+${v.deferred}排队)`:''}</span><b>${v.processing}路 · slot ${busy}/${v.slots.length}</b></div>
         <div class="rrow"><span>请求</span><b>${v.qps!=null?v.qps.toFixed(1)+' QPS':'—'} · 累计 ${v.req_total.toLocaleString()}</b></div>
-        <div class="rrow"><span>缓存命中 / MTP</span><b>${v.cache_hit}% / ${v.mtp_acc}%</b></div>
+        <div class="rrow"><span>缓存命中 / 草稿接受率</span><b>${v.cache_hit}% / ${v.mtp_acc}%</b></div>
         <div class="rrow"><span>每路速度</span><b>${v.stream_tps && v.stream_tps.length ? v.stream_tps.map(x=>x.toFixed(0)).join(' / ')+' tok/s' : '—'}</b></div>
         <div class="slotbar">${v.slots.map(s=>
           `<i class="${s.busy?'on':''}" title="${s.busy?'忙碌':'空闲'} · prompt ${s.prompt_tok} tok · 缓存命中 ${s.cache_tok} tok · 已生成 ${s.n_decoded} tok"></i>`).join('')}</div>
@@ -438,6 +492,8 @@ async function tick(){
         <div class="row"><span>利用率</span><b>${util}%</b></div>
         <div class="bar"><i style="width:${util}%;background:${color(util)}"></i></div>
         <div class="row"><span>温度 ${g.temperature_gpu}°C</span><span>功耗 ${g.power_w} W</span></div>
+        <div class="row"><span>风扇 ${g.fan}%</span><span>SM 频率 ${g.sm_mhz} MHz</span></div>
+        <div class="bar"><i style="width:${g.fan}%;background:${color(g.fan)}"></i></div>
         ${phtml}
       </div>`;
     }).join('');

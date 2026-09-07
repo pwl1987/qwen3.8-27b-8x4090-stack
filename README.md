@@ -33,7 +33,7 @@
 │   │   ├── collect.sh
 │   │   └── index.html          # 前端（2s 轮询, 24h 历史曲线）
 │   └── scripts/
-│       ├── gpu-power.sh        # GPU 功耗墙切换（软件降噪：450W→250W→200W）
+│       ├── gpu-power.sh        # GPU 功耗墙切换 v2（软件降噪：逐卡 day/quiet/night 三档 + 节假日日历）
 │       └── noise-mode.sh       # 白天软摘除 r2/r3 副本停机降风扇, 晚间恢复
 ├── vllm/                       # ★ vLLM 单卡高速通道（基于 syv-ai/qwen38-27b-rtx3090 栈改造, Apache-2.0）
 │   ├── compose.yaml            # 生产 compose（GPU6, :19622, OpenAI 兼容）
@@ -49,7 +49,7 @@
 │   │   ├── ds_zero2.json / ds_zero3_*.json
 │   │   ├── monitor.sh          # 单行训练状态 + cron 死亡自动续训
 │   │   ├── smoke_test.py
-│   │   └── TRAIN-NOTES.md      # ★ 执行记录 + 6 个踩坑（全部实测复现）
+│   │   └── TRAIN-NOTES.md      # ★ 执行记录 + 6 个踩坑（全部实测复现）；09-05 起追加 ComfyUI/驱动580/vLLM S1→P0 全程日志（689 行）
 │   └── llamacpp/               # llama.cpp b10715 补丁后的两个文件
 │       ├── convert_lora_to_gguf.py   # ★ GDN out_proj 列重排补丁（混合注意力 LoRA 转换死点）
 │       └── qwen.py                       # ★ _reorder_v_heads LoRA 张量置换路径
@@ -197,7 +197,7 @@ RFT 验证沙箱（`rft/sandbox_bench.py`）：Docker `--network none --read-onl
 
 ## 运维脚本
 
-- `gpu-power.sh`：功耗墙 450W→250W（day）/200W（quiet）——4090 不支持软件锁风扇，功耗墙压低 → 温度降 → 温控曲线自动降风扇，唯一可靠软件降噪手段
+- `gpu-power.sh`（v2）：功耗墙逐卡三档 `gpu-power.conf`（day/quiet/night）+ `holidays.txt`/`workdays.txt` 节假日日历、周末自动跳过、幂等执行、status 对照表——4090 不支持软件锁风扇，功耗墙压低 → 温度降 → 温控曲线自动降风扇，唯一可靠软件降噪手段。实测 250W 日间档对显存带宽型 decode 仅 -1.5%
 - `noise-mode.sh`：白天 LB 软摘除 r2/r3（`DISABLED` 文件，在途请求自然完成）→ docker stop 降风扇；晚间恢复接流。配 crontab 8 点/18 点自动切换
 - `mon/`：2s 粒度 GPU + 副本 slot 监控，24h 历史落盘（容器重建不丢）
 
