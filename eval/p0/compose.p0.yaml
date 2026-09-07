@@ -1,0 +1,21 @@
+# P0 差距分解沙箱：GPU2、:19627（不碰 GPU6 生产）
+# 用法: cd /data/sandbox/ab-vllm/repo && docker compose -p zx-p0 -f compose.yaml -f /tmp/p0/compose.p0.yaml up -d
+services:
+  qwen:
+    environment:
+      PORT: "19627"
+    ports: !override
+      - "0.0.0.0:19627:19627"
+    deploy:
+      resources:
+        reservations:
+          devices: !override
+            - driver: nvidia
+              device_ids: ['2']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:19627/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 900s

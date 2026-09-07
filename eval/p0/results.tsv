@@ -1,0 +1,23 @@
+A1	156.50916580683068	 tok/step	%/tok
+A3	129.9914547369889	3.04 tok/step	29.2%/tok
+P1-MTP	102.37622180833158	2.7 tok/step	56.8%/tok
+A4-CHAIN	121.18320929679054	2.84 tok/step	26.3%/tok
+A2-NOFAST	BOOT-FAIL	(APIServer pid=1)   File "/app/venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py", line 1194, in launch_core_engines (APIServer pid=1)     wait_for_engine_startup( (APIServer pid=1)   File "/a
+A2-NOFAST	146.2785111512959	3.46 tok/step	35.2%/tok
+A1B-FAST-TRIM	137.3699939952378	3.09 tok/step	29.9%/tok
+A1C-CG1000	BOOT-FAIL	(APIServer pid=1)   File "/app/venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py", line 1194, in launch_core_engines (APIServer pid=1)     wait_for_engine_startup( (APIServer pid=1)   File "/a
+A1D-KV4860	BOOT-FAIL	(APIServer pid=1)   File "/app/venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py", line 1194, in launch_core_engines (APIServer pid=1)     wait_for_engine_startup( (APIServer pid=1)   File "/a
+A1E-240K	133.57156156803734	3.01 tok/step	28.7%/tok
+A1-RERUN	159.37405640291604	3.6 tok/step	37.1%/tok
+A6A-192K-L1	123.43925673245023	2.9 tok/step	27.1%/tok
+A6B-192K-L0	129.87201054062135	3.04 tok/step	29.2%/tok
+A7A-253952	166.40782710786408	3.72 tok/step	38.8%/tok
+A7B-249856	157.08596912479567	3.52 tok/step	36.1%/tok
+A8-CODING-249856	BENCH-FAIL
+A8B-249856-L0	125.43783773269308	2.94 tok/step	27.7%/tok
+A8C-249856-L1	171.57679467941523	3.89 tok/step	41.3%/tok
+A8D-ADAPT0	122.56072286293387	2.87 tok/step	26.7%/tok
+A8C2	171.26909431696768	3.89 tok/step	41.3%/tok
+A8E-PC0	BENCH-FAIL
+A8F-PC0-U95	128.13957049905963	2.94 tok/step	27.7%/tok
+A8G-PC1-U95	122.51885284400355	2.87 tok/step	26.7%/tok

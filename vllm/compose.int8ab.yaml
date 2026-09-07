@@ -1,0 +1,24 @@
+# int8 头对照引擎（A/B 专用）：GPU4、:19626、MAX_LEN=196608（int8 头 262K 有首请求 OOM 前科）
+# 用法: PORT=19626 docker compose -p zx-int8ab -f compose.yaml -f compose.int8ab.yaml up -d
+services:
+  qwen:
+    environment:
+      MODEL: /data/models/Qwen3.8-27B-coding-v1.1-W4A16-head4-g64-v3
+      PORT: "19626"
+      MAX_LEN: "196608"
+      DFLASH_MAX_LEN: "196608"
+    ports: !override
+      - "0.0.0.0:19626:19626"
+    deploy:
+      resources:
+        reservations:
+          devices: !override
+            - driver: nvidia
+              device_ids: ['4']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:19626/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 900s

@@ -20,3 +20,11 @@ eval/rulers/outputs/
 # 环境
 .env
 .venv/
+
+# vllm 栈大文件不入库
+vllm/models/
+vllm/cache/
+vllm/build.log
+vllm/.env
+*.pt
+__pycache__/

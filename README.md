@@ -1,13 +1,15 @@
 # Qwen3.8-27B · 8×RTX 4090 推理与后训练全栈
 
 > qwen3.8-27b（27.3B 参数，qwen35 混合线性注意力架构）在单机 8×RTX 4090 24GB 上的完整工程实践：
-> **4 副本 256K 上下文推理 + OpenResty 动态会话粘滞负载均衡**、**QLoRA 后训练**、**LoRA→GGUF 转换与运行时热挂**、**A/B 门禁评测**。
+> **4 副本 256K 上下文推理 + OpenResty 动态会话粘滞负载均衡**、**vLLM 单卡投机解码高速通道（130 tok/s @240K）**、
+> **QLoRA 后训练**、**LoRA→GGUF 转换与运行时热挂**、**A/B 门禁评测**。
 > 所有数字均为本机实测，附完整踩坑记录与显存账。
 
 - [仓库结构](#仓库结构)
 - [硬件与模型](#硬件与模型)
 - [推理部署（deploy/）](#推理部署deploy)
 - [负载均衡策略（deploy/lb/route.lua）](#负载均衡策略deploylbroutelua)
+- [vLLM 单卡高速通道（vllm/）](#vllm-单卡高速通道vllm)
 - [后训练（posttrain/）](#后训练posttrain)
 - [LoRA→GGUF 转换与热挂](#loragguf-转换与热挂)
 - [门禁评测（eval/）](#门禁评测eval)
@@ -33,6 +35,13 @@
 │   └── scripts/
 │       ├── gpu-power.sh        # GPU 功耗墙切换（软件降噪：450W→250W→200W）
 │       └── noise-mode.sh       # 白天软摘除 r2/r3 副本停机降风扇, 晚间恢复
+├── vllm/                       # ★ vLLM 单卡高速通道（基于 syv-ai/qwen38-27b-rtx3090 栈改造, Apache-2.0）
+│   ├── compose.yaml            # 生产 compose（GPU6, :19622, OpenAI 兼容）
+│   ├── .env.example            # 终配模板（240K + DFlash2 k=7 + 重校准 drafter, 已认证）
+│   ├── compose.int8ab.yaml     # 双引擎 A/B 样板（!override 换卡换端口）
+│   ├── patches/ docker/ kvarn/ single-user/ profiles/ bench/ prepare/ verify.sh   # 栈本体（28 补丁）
+│   ├── drafter/                # DFlash2 drafter GPTQ W4A16 重校准管线（+6.9%）
+│   └── results/                # 实验 JSON
 ├── posttrain/
 │   ├── train/                  # QLoRA 训练（ms-swift + DeepSpeed, 4×4090）
 │   │   ├── run_train.sh        # 启动脚本（stage_a 短轨 / 断点续训 / 自动巡检）
@@ -48,6 +57,7 @@
 │   ├── gate.sh                 # ★ Phase 4 一键门禁：双实例 A/B → 全轴评测 → 判定
 │   ├── compare_gate.py         # 判定规则（任一轴回退>2pp FAIL；核心轴严格提升）
 │   ├── run_baseline.py         # 评测执行器（humaneval/xfc/gsm8k/ifeval/needle/longgen/tps）
+│   ├── p0/                     # ★ vLLM 差距归因工具箱（隔离步速分解/12 残差前缀正确性门/A-B 试验机）
 │   ├── rft/
 │   │   ├── sandbox_bench.py    # RFT 验证沙箱（Docker 隔离, MBPP sanitized_test）
 │   │   └── sbx_*.json          # 50/128/257 路并发压测结果
@@ -113,6 +123,26 @@ OpenResty + Lua 的动态路由（多副本 llama-server 的成熟方案很少�
 3. **新会话接最闲健康副本**；池占用 ≥ POOL_HI 的副本不接新会话（大上下文会话独占）
 4. **大小会话分流**：请求体 >600KB（≈130K+ token）→ 大会话池（r2/r3 独享，每副本装 1 个 130-256K 会话）；其余 → 小会话池。避免大中小会话在共享 KV 池里互相驱逐（`Context size exceeded` / 反复冷 prefill 的根源）
 5. 副本负载探测（busy slot 数 + 驻留 prompt token 总和）2 秒缓存；`/_lbstats` 路由计数（粘滞/漂移/新会话/每副本选中）；`DISABLED` 文件软摘除（缩容 drain 用，全禁用时忽略防自锁）
+
+## vLLM 单卡高速通道（vllm/）
+
+生产 LB 池之外的**单卡高速通道**：自后训模型 coding-v1.1（W4A16 + int8 头）跑在改造版
+[syv-ai/qwen38-27b-rtx3090](https://github.com/syv-ai/qwen38-27b-rtx3090) 栈上（vLLM 0.27.1 + 28 补丁 +
+KVarN 4/2-bit KV + DFlash2 块式投机解码），单卡 24GB 内塞下 **240K 上下文 + 视觉 + 前缀缓存**：
+
+| 指标 | 值 | 对比生产副本 |
+|---|---|---|
+| decode（p565/g512 中位） | **130 tok/s @240K** | 1.45×（90 tok/s），且省 1 卡 |
+| prefill | ~2550 tok/s @32K | |
+| 投机解码 | DFlash2 k=7，3.0-3.2 tok/step，24ms/步 | MTP 链实测 102 tok/s，弃 |
+
+关键工程点（完整日志见 `docs/VLLM-OPTIMIZATION.md`）：
+- **drafter 重校准**：DFlash2 侧车按自分布 Hessian GPTQ 重校准（`vllm/drafter/`），+6.9% 接受率
+- **240K 显存配平**：KV 池 5.26→4.86GB + CUDA 图 1400→1000MiB，绕过 FLA 内核碎片缘的 42MB 级死亡
+- **int4 lm_head 判死**：4 轮 GPTQ 校准均留确定性退化且无速度收益（步速本已与参照持平）
+- **差距归因定案**：对 175.4 tok/s 参照做了 20+ 对照臂拆解——步速差不存在；其余量全在
+  lookup/adaptive 通道（可到 171.6，但 adaptive×前缀缓存存在确定性输出损坏 4/12 + OOM 悬崖，不可上产，
+  归上游修复）；250W 功耗墙对 decode 仅 -1.5%
 
 ## 后训练（posttrain/）
 
@@ -184,6 +214,7 @@ RFT 验证沙箱（`rft/sandbox_bench.py`）：Docker `--network none --read-onl
 Single-machine **8×RTX 4090** full stack for **qwen3.8-27b** (27.3B, hybrid linear-attention / GDN):
 
 - **Inference**: 4× llama.cpp (b10715) replicas, 256K ctx each at 97% VRAM, MTP speculative decoding (~47% acceptance, 72 tok/s single-stream, ~420 tok/s aggregated over 16 slots), fronted by an **OpenResty + Lua dynamic load balancer** with session-sticky prefix-cache routing, saturation drift, and large/small session pool splitting.
+- **Single-card fast lane (vllm/)**: the post-trained model on an adapted vLLM 0.27.1 stack (KVarN 4/2-bit KV + DFlash2 block speculation) — **130 tok/s decode @240K** (1.45× a production replica on one card), with a GPTQ-recalibrated drafter (+6.9%), a full gap-attribution campaign vs the 175 tok/s reference (step-time parity proven; the remainder lives in a lookup/adaptive lane that is output-corrupting under prefix-cache hits and therefore vetoed), and a 12-residue prefix-cache correctness gate.
 - **Post-training**: 4-GPU QLoRA (NF4 + ZeRO-3, rsLoRA r=32) with full VRAM accounting and six documented OOM/schema pitfalls; ~27h for 4840 steps.
 - **Deployment of the adapter**: llama.cpp patches to convert GDN/linear-attention LoRA adapters to GGUF (out_proj column-permute dead-end), rsLoRA `√r` scale compensation (`--lora-scaled …:5.657`), and no-restart hot-swapping via `POST /lora-adapters`.
 - **Release gating**: a falsifiable A/B gate — baseline frozen on a fixed ruler (HumanEval / tool-call / GSM8K / IFEval / needle / long-gen), FAIL on any >2pp regression, strict improvement required on core axes.
@@ -191,3 +222,4 @@ Single-machine **8×RTX 4090** full stack for **qwen3.8-27b** (27.3B, hybrid lin
 ## License
 
 MIT — see [LICENSE](LICENSE). 模型权重版权归原作者所有，本仓库仅含工程代码、配置与评测数据。
+`vllm/` 目录包含来自 [syv-ai/qwen38-27b-rtx3090](https://github.com/syv-ai/qwen38-27b-rtx3090) 的 Apache-2.0 代码（附原许可证），其余为本仓库原创。
