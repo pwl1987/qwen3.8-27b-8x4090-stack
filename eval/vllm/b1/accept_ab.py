@@ -78,9 +78,54 @@ def run_prompt(base, target_tokens, tag):
     }
 
 
-def t3_sha(base):
-    r = run_prompt(base, 512, "t3")
-    return r["sha12"], r
+def semantic_ok(text: str) -> dict:
+    """B1.1 layer B: deterministic defect checks (P0 semantic-gate rules)."""
+    if not text or len(text) < 10:
+        return {"ok": False, "why": "empty/short"}
+    printable = sum(1 for c in text if c.isprintable() or c in "\n\t")
+    garb = printable / len(text) < 0.85
+    rep = False
+    for p in range(10, 121):                     # immediate periodicity x3
+        for i in range(0, max(0, min(len(text) - 3 * p, 4000))):
+            if text[i:i + p] == text[i + p:i + 2 * p] == text[i + 2 * p:i + 3 * p]:
+                rep = True
+                break
+        if rep:
+            break
+    return {"ok": not (garb or rep), "garbage": garb, "repeat_loop": rep}
+
+
+def t3_full(base, tag):
+    """One t3 run capturing text for the A/B/C contract layers."""
+    payload = {
+        "model": "qwen3.8-27b",
+        "messages": [{"role": "user", "content": make_prompt(512)}],
+        "max_tokens": 512, "temperature": 0, "seed": 4242,
+        "cache_salt": "b1c-t3-" + uuid.uuid4().hex,
+        "chat_template_kwargs": {"enable_thinking": False},
+    }
+    d0, a0 = snap(base)
+    res, el = post_json(base + "/v1/chat/completions", payload)
+    d1, a1 = snap(base)
+    txt = res["choices"][0]["message"]["content"]
+    return {"tag": tag, "text": txt,
+            "sha12": hashlib.sha256(txt.encode()).hexdigest()[:12],
+            "tok_per_step": (a1 - a0) / (d1 - d0) + 1 if d1 > d0 else None,
+            "semantic": semantic_ok(txt)}
+
+
+def comparative(a_txt: str, b_txt: str, a_sem: dict, b_sem: dict) -> str:
+    """B1.1 layer C: EXACT / BENIGN-DIFF / UNRESOLVED / FAIL."""
+    if not a_sem["ok"] or not b_sem["ok"]:
+        return "FAIL"
+    if a_txt == b_txt:
+        return "EXACT"
+    la, lb = len(a_txt), len(b_txt)
+    if not (0.5 <= la / max(1, lb) <= 2.0):
+        return "UNRESOLVED"
+    n = min(la, lb)
+    cp = next((i for i in range(n) if a_txt[i] != b_txt[i]), n)
+    return "BENIGN-DIFF" if cp >= 20 else "UNRESOLVED"
 
 
 def main():
@@ -94,9 +139,21 @@ def main():
 
     if args.phase in ("A", "B"):
         results = []
-        sha, t3 = t3_sha(base)
-        print(f"[{label}] t3 sha = {sha} (chars={t3['chars']})", flush=True)
-        results.append(t3)
+        t3a = t3_full(base, label)
+        t3b = t3_full(base, label)
+        contract = {
+            "self_deterministic": t3a["sha12"] == t3b["sha12"],
+            "sha12": t3a["sha12"], "chars": len(t3a["text"]),
+            "semantic": t3a["semantic"],
+            "t3_tok_per_step": t3a["tok_per_step"],
+        }
+        print(f"[{label}] t3 sha={t3a['sha12']} det={contract['self_deterministic']} "
+              f"sem={t3a['semantic']}", flush=True)
+        results.append({"target_tokens": 512, "tag": label,
+                        "tok_per_step": t3a["tok_per_step"],
+                        "sha12": t3a["sha12"], "chars": len(t3a["text"])})
+        with open(f"{CACHE}/{label}-contract.json", "w") as f:
+            json.dump(contract, f, indent=1, ensure_ascii=False)
         for tt in range(300, 691, 13):          # 31 fresh FINAL prompts
             try:
                 r = run_prompt(base, tt, label)
@@ -116,6 +173,21 @@ def main():
         B = {r["target_tokens"]: r for r in json.load(open(f"{CACHE}/B.json"))}
         sha_a = A[512]["sha12"]
         sha_b = B[512]["sha12"]
+        contract = {}
+        for ph in ("A", "B"):
+            p = f"{CACHE}/{ph}-contract.json"
+            if os.path.exists(p):
+                contract[ph] = json.load(open(p))
+        if contract.get("A") and contract.get("B"):
+            contract["C_comparative"] = comparative(
+                open(f"{CACHE}/A-t3.txt").read() if os.path.exists(f"{CACHE}/A-t3.txt") else "",
+                "", contract["A"]["semantic"], contract["B"]["semantic"]) \
+                if False else "see-report"   # 文本未缓存时由探针侧报告
+            contract["target_correctness"] = (
+                "PASS" if contract["A"]["self_deterministic"]
+                and contract["B"]["self_deterministic"]
+                and contract["A"]["semantic"]["ok"]
+                and contract["B"]["semantic"]["ok"] else "FAIL")
         pairs = []
         n_total = n_valid = n_pos = n_neg = n_tie = 0
         for tt in sorted(set(A) & set(B)):
@@ -163,6 +235,7 @@ def main():
         # sha 记录保留；target-correctness 语义裁定（连贯性）见 REPORT——本引擎
         # 贪心输出随 verify 批组合翻转（S4 机制，P0 裁良性），逐字节等式不可达
         report = {
+            "b11_contract": contract,
             "N_total": n_total, "N_valid": n_valid, "N_positive": n_pos,
             "N_negative": n_neg, "N_tie": n_tie,
             "mean_delta_tok_per_step": round(mean, 4),

@@ -168,36 +168,45 @@ def main():
              "rank": [], "margin": [], "own_walk_k": [], "engine_k": []}
     replay_dev(model, dev, stats)
     # clean the placeholder tail used during per-step collection
+    # B1.1 two-family split (CONTRACT-B1.1.md): compatibility = drift, never a
+    # quality gate; speculation quality = the only gated family.
     report = {
         "tag": args.tag, "ckpt": args.ckpt, "dev_runs": args.dev_runs,
-        "fc_cos": q(stats["fc_cos"]), "sh_cos": q(stats["sh_cos"]),
-        "top16": q(stats["top16"]),
-        "recall": round(sum(stats["recall"]) / max(1, len(stats["recall"])), 4),
-        "top1": round(sum(stats["top1"]) / max(1, len(stats["top1"])), 4),
-        "mean_rank": round(sum(stats["rank"]) / max(1, len(stats["rank"])), 3),
-        "mean_margin": round(sum(stats["margin"]) / max(1, len(stats["margin"])), 3),
-        "own_walk_k": round(sum(stats["own_walk_k"]) / max(1, len(stats["own_walk_k"])), 4),
-        "engine_k": round(sum(stats["engine_k"]) / max(1, len(stats["engine_k"])), 4),
+        "baseline_compatibility": {
+            "fc_cos": q(stats["fc_cos"]),
+            "sh_cos_vs_engine": q(stats["sh_cos"]),
+            "top16_vs_engine": q(stats["top16"]),
+            "floor_diagnostic": {
+                "top16_mean>=14": (q(stats["top16"]).get("mean") or 0) >= 14,
+                "top16_p10>=12": (q(stats["top16"]).get("p10") or 0) >= 12,
+            },
+        },
+        "speculation_quality": {
+            "recall": round(sum(stats["recall"]) / max(1, len(stats["recall"])), 4),
+            "top1": round(sum(stats["top1"]) / max(1, len(stats["top1"])), 4),
+            "mean_rank": round(sum(stats["rank"]) / max(1, len(stats["rank"])), 3),
+            "mean_margin": round(sum(stats["margin"]) / max(1, len(stats["margin"])), 3),
+            "own_walk_k": round(sum(stats["own_walk_k"]) / max(1, len(stats["own_walk_k"])), 4),
+            "engine_k": round(sum(stats["engine_k"]) / max(1, len(stats["engine_k"])), 4),
+        },
         "n_steps": len(stats["sh_cos"]) // 7,
     }
-    base = json.load(open(args.baseline)) if os.path.exists(args.baseline) else None
-    if args.tag == "base":
+    sq = report["speculation_quality"]
+    base = json.load(open(args.baseline)) if (
+        os.path.exists(args.baseline) and args.tag != "base") else None
+    if base is not None:
+        b = base["speculation_quality"]
         report["gates"] = {
-            "sh_cos_mean>=0.999": report["sh_cos"]["mean"] >= 0.999,
-            "top16_mean>=15.4": report["top16"]["mean"] >= 15.4,
-        }
-    elif base is not None:
-        bm, bp = base["top16"]["mean"], base["top16"]["p10"]
-        report["gates"] = {
-            # absolute B0 floor
-            "top16_mean>=14": report["top16"]["mean"] >= 14,
-            "top16_p10>=12": report["top16"]["p10"] >= 12,
-            # relative no-regression vs baseline replay (same code, same DEV)
-            "top16_mean>=base-0.4": report["top16"]["mean"] >= bm - 0.4,
-            "top16_p10>=base-1": report["top16"]["p10"] >= bp - 1,
-            "dev_recall>=base": report["recall"] >= base["recall"] - 1e-4,
+            "recall>=base": sq["recall"] >= b["recall"] - 1e-4,
+            "top1>=base-0.005": sq["top1"] >= b["top1"] - 0.005,
+            "margin>=base-0.5": sq["mean_margin"] >= b["mean_margin"] - 0.5,
         }
         report["baseline_tag"] = base.get("tag")
+    else:
+        report["gates"] = {   # sanity floors for the baseline reference run
+            "recall>=0.95": sq["recall"] >= 0.95,
+            "top1>=0.80": sq["top1"] >= 0.80,
+        }
     out = args.out or f"/tmp/b1/gate-{args.tag}.json"
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as f:
