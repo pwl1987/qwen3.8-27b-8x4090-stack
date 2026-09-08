@@ -1,0 +1,28 @@
+--- speculator_b0.py	2026-09-08 17:07:40.158873745 +0800
++++ speculator.py	2026-09-08 17:07:28.789272878 +0800
+@@ -32,7 +32,8 @@
+ #   out (_generate_draft 出口): fc 输出(self.hidden_states)、drafter 5 层输出(sample hidden)、
+ #       candidate top-16、unary、sanitized scores、selector 选中路径、anchor token
+ # 注意: 须 --enforce-eager——FULL cudagraph 下 _generate_draft 被捕获, Python 只在捕获期执行一次。
+-_ASK = {"steps": [], "n": 0, "max_steps": 600}
++_ASK = {"steps": [], "n": 0,
++        "max_steps": int(os.environ.get("DFLASH_ASK_MAX", "600"))}
+ 
+ 
+ def _ask_on() -> bool:
+@@ -505,8 +506,14 @@
+                         if v is not None:
+                             toks = torch.as_tensor(list(v[:nt]))
+                             break
++                    # B1 v2: 判定域直录——num_rejected/num_sampled 是 propose() 的
++                    # 函数参数([num_reqs])，版本无关。有了 nr，teacher 监督
++                    # (被接受 drafts + 纠错 anchor) 是纯 trace 变换，不依赖输出文本。
++                    nr = num_rejected[: input_batch.num_reqs].detach().to("cpu", copy=True)
++                    ns = num_sampled[: input_batch.num_reqs].detach().to("cpu", copy=True)
+                     _ask_add({"kind": "in", "num_tokens": nt, "aux": aux,
+-                              "input_ids": toks})
++                              "input_ids": toks,
++                              "num_rejected": nr, "num_sampled": ns})
+             except Exception as _e:  # noqa: BLE001 — trace 永不影响主流程
+                 _df_trace({"ev": "ask_in_err", "err": repr(_e)[:200]})
+         # Chain eligibility is decided HERE, on the host, once per step --

@@ -1,0 +1,14 @@
+{
+ "trace": "/data/sandbox/ab-vllm/b1/trace-b0-260",
+ "mode": [
+  "legacy",
+  "legacy",
+  "legacy"
+ ],
+ "sup_steps": 243,
+ "anchor_internal_check": "243/243",
+ "valid_depth_rate": 0.4838,
+ "teacher_in_candidate_rate": 0.9635,
+ "valid_selector_rate": 0.9635,
+ "mean_observable_depth": 3.3868
+}

@@ -1,0 +1,126 @@
+{
+ "pairs": 259,
+ "runs": 3,
+ "A_fc_cos": {
+  "n": 2048,
+  "mean": 1.0,
+  "p50": 1.0,
+  "p10": 1.0,
+  "min": 1.0
+ },
+ "B_sample_hidden_cos": {
+  "n": 1701,
+  "mean": 0.9999,
+  "p50": 0.9999,
+  "p10": 0.9999,
+  "min": 0.9998
+ },
+ "oracle_num_valid_cos": {
+  "n": 256,
+  "mean": 0.9972,
+  "p50": 0.9999,
+  "p10": 0.9999,
+  "min": 0.646
+ },
+ "C_e2e_top16_overlap": {
+  "n": 1701,
+  "mean": 15.8078,
+  "p50": 16.0,
+  "p10": 15.0,
+  "min": 14.0
+ },
+ "mid_scores_max_abs_diff": {
+  "n": 243,
+  "mean": 9.8964,
+  "p50": 9.3184,
+  "p10": 6.3359,
+  "min": 5.2188
+ },
+ "mid_path_acc": {
+  "n": 243,
+  "mean": 0.0
+ },
+ "e2e_walk_min_margin": {
+  "n": 243,
+  "mean": 0.0943,
+  "p50": 0.0625,
+  "p10": 0.0,
+  "min": 0.0
+ },
+ "engine_path_k_mean": 2.5144,
+ "own_walk_k_mean": 0.1358,
+ "e2e_path_marginclear_acc": {
+  "n": 0,
+  "mean": 0.0
+ },
+ "e2e_path_nontie_acc": {
+  "n": 217,
+  "mean": 0.0
+ },
+ "e2e_tie_steps": 26,
+ "teacher_stream_validation": {
+  "kv_agree": "244/244",
+  "oracle_agree": "254/256",
+  "prefill_anchor_miss": 3,
+  "prefill_v": [
+   [
+    384,
+    384
+   ],
+   [
+    128,
+    128
+   ],
+   [
+    53,
+    53
+   ],
+   [
+    384,
+    384
+   ],
+   [
+    128,
+    128
+   ],
+   [
+    53,
+    53
+   ],
+   [
+    384,
+    384
+   ],
+   [
+    128,
+    128
+   ],
+   [
+    53,
+    53
+   ]
+  ]
+ },
+ "anchor_reconstruction": [
+  {
+   "anchor_checks": 83,
+   "anchor_ok": 83
+  },
+  {
+   "anchor_checks": 83,
+   "anchor_ok": 83
+  },
+  {
+   "anchor_checks": 77,
+   "anchor_ok": 77
+  }
+ ],
+ "gates": {
+  "sh_cos_mean>=0.999": true,
+  "sh_cos_p10>=0.995": true,
+  "e2e_top16_mean>=15.4": true,
+  "e2e_top16_p10>=14": true,
+  "anchor_chain==100%": true,
+  "|k_mean-2.56|<=0.15": true
+ }
+}
