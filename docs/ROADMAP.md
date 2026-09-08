@@ -3,23 +3,28 @@
 基于 2026-09-07 P0 归因定案（`VLLM-OPTIMIZATION.md` §4）：现产 130 tok/s 与同配置参照持平，
 步速差不存在；所有已知余量都压在三条可工程化的路线上。按 投入/产出/风险 排序：
 
-## 方向 A：修复 adaptive×前缀缓存损坏 → +32%（首选）
+## 方向 A：修复 adaptive×前缀缓存损坏 → +32%（**已关闭**，2026-09-08 根因闭环）
 
-**收益**：`MAX_LEN=249856 + LOOKUP=1 + adaptive + GPU_UTIL=0.93 + 前缀缓存` 五要素齐活时实测
-**171.6 tok/s**（重复性内容 3.89 tok/step）。配置、判别链与回归门（`eval/vllm/p0/multi_residue_test.py`）
-已全部备好，差的只是那个 bug 的修复。
+09-08 GPU2 沙箱全日战役推翻了本方向的两条前提，结案文档 `eval/vllm/p0/S4-ROOTCAUSE-20260908.md`：
 
-**修复点定位**（上游栈已知问题，复测 4/12 残差中招）：
-- 现象：verify 块长在 8↔16 间交替的请求，从前缀缓存恢复后，目标模型前向输出确定性错乱
-  （暖命中轮 vs 冷基准轮内容分歧，如 "is not supporting" vs "is being removed"）
-- 已排除：lookup 起草内容本身（错误草稿不可能污染 greedy 输出——rejection_sampler 恒输出
-  target_argmax）、KVarN 内核本体（KVARN_FUSED_VERIFY=0 仍错）
-- 嫌疑面：块长变化 × 前缀恢复路径上的调度器/注意力元数据一致性（resumed 请求的
-  num_computed_tokens 与变长 verify 的 query 布局）
-- 修好后验收：12 残差矩阵全 CLEAN + 五要素配置 ulmus ≥165 + 5 探针零损
+1. **没有 bug 可修**：残差矩阵分歧与 lookup/adaptive 无关（LOOKUP=0 下 7/12 比 L1 的 3~4/12
+   更重）。根因=引擎级计算布局非确定性：暖轮尾段重算的 chunk 边界（恢复点）≠冷轮分块
+   边界 → 混合 GDN 状态扫描比特差 → 近平局 greedy 翻转。全部分歧为连贯备选续写（无垃圾）。
+   上游同源：#55524 exact-replay RFC 明确**排除** spec-decode+prefix-caching 组合的位一致性；
+   #53436 记录了同类 temp=0 逐次不确定。token 级定位：b2 恢复 nct=8704/10514，首分歧在生成区
+   第 41 token，两轮 verify 形状恒等（k=7 下 adaptive 结构性关闭，8↔16 切换从未发生——
+   start_qwen.sh 自测矩阵是 k>7 场景，A8D-ADAPT0 env 为 no-op，其 122.6 是低档 boot）。
+2. **171.6 不可稳定交付**：t3 在相同配置与流程下呈 per-boot 双峰 ~169（41.3%/tok）/
+   ~120（27.1%/tok），boot 内粘滞、跨 boot 随机（合并 ~44% 高），低档**低于现产 130**；
+   g512 先行/完整 canary 均不能翻高。lookup 融合的价值只在高档 boot 的引用型内容上成立。
 
-**显存连带**：该通道贴 OOM 悬崖（U93+KV5000 才活），修复时应一并查 42MB 级动态分配的
-碎片缘（FLA 内核 expandable_segments 映射失败），给通道留 ≥300MB 余量。
+**连带影响**：现产 130.0 认证配置（L0+PC1）本身带 7/12 暖/冷分歧——vLLM 通道无用户流量
+（主产=llama.cpp），上产前须知：单轮零影响，多轮暖命中轮续写可能非逐字节同（良性），
+复现敏感路径用 cache_salt。`multi_residue_test.py` 语义改为「暖/冷分歧率监测」：
+连贯备选=良性，垃圾/复读=真损坏（历史上未出现过）。
+
+**优先级重排**：B（drafter 蒸馏重训，130→150）升为首选；C（0.28 迁移）次之，首任务=
+本矩阵在 0.28 复测；D 依附 C。
 
 ## 方向 B：DFlash2 drafter 深度重训 → 裸接受率 3.0→3.5+（根治）
 
