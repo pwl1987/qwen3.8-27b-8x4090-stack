@@ -103,6 +103,103 @@ CUDA_VISIBLE_DEVICES=4 /data/vllm/venv/bin/python train.py --arm b1-1 --steps 50
 
 trace 归档：`/data/sandbox/ab-vllm/b1/trace-b0-260/`（222MB，.pt 不入 git）。
 
-## B1-B / B1-C
+## B1-B 四臂训练（2026-09-08 晚，GPU4 串行）
 
-（待后续阶段追加：四臂训练 + 每 ckpt replay 门 + 沙箱双统计验收 + W4 shadow。）
+**数据**：v2 trace 2080 对（`/data/sandbox/ab-vllm/b1/trace-v2`，插桩 v2 num_rejected
+直录）；三级隔离 TRAIN=calib 行 0-29+38-45（34 runs）/ DEV=行 30-37（8 runs）/
+FINAL=ulmus 新提示词（B1-C 专用，采数全程不可见）。DEV 基线 gate 全过
+（sh_cos 0.9999、top16 15.76）；DEV 代理基线 recall 0.9823 / top1 0.8347 / margin 5.35；
+引擎 k 3.99（calib 语料对 drafter 友好，接受已高——天花板效应的先兆）。
+
+**四臂结果**（recipe 冻结：AdamW 1e-5 / β(0.9,0.95) / wd 0 / chunk 8 / seed 42 / ≤2000 步 /
+ckpt@500 / 早停 patience 2 仅凭 proxy）：
+
+| 臂 | 可训练 | best DEV（步） | ΔL2 相对（fc / hp / succ） | 引擎 top16 终值 |
+|---|---|---|---|---|
+| B1-0 | 无 | =基线（对照） | **0（逐位）** | 15.76（=基线逐位） |
+| B1-1 | fc+selector | recall 0.9908 / top1 0.8882 / margin 7.03（2000） | 0.65% / 10.7% / 0.34% | 13.91 |
+| B1-2 | fc | recall 0.9908 / top1 0.8880 / margin 6.47（2000） | 0.68% / 0 / 0 | 13.82 |
+| B1-3 | selector | 候选代理不动（1500 早停）；L_sel 4.44→4.31 | 0 / 8.6% / 0.26% | 15.76（=基线） |
+
+**增益分解（acceptance attribution）**：
+- **候选侧收益全部来自 fc**（b1-2 单独追平 b1-1 的 recall 0.9908）；
+- selector 增益体现在 margin 深度（b1-1 margin 7.03 vs b1-2 的 6.47）；
+- b1-3 的候选代理结构性盲区：recall/top1/margin 只经 lm_head 路径，selector 不经过——
+  权重确实移动（ΔL2 与 b1-1 的 selector 部分同量级）但代理不可见；selector 单独收益
+  只能由 L_sel 或引擎 acceptance 评判。
+
+**门的 adjudication（治理记录，非改门）**：fc 臂对引擎记录的 top16 重叠随训练单调漂移
+（15.76→14.97→…→13.9，500 步起破相对门 −0.4，2000 步破绝对底线 14）。根因：训练
+本 reshapes 候选分布（teacher 进前排=候选集改变），重叠度量的是"与旧 drafter 一致性"
+而非质量——非复刻损坏（无 NaN、recall↑、DEV loss↓、绝对底线在 500-1500 保持）。
+**选择规则按冻结执行**：绝对底线过滤 + DEV 最佳 → **b1-1@1500**（margin 6.69，top16 14.26）。
+
+## B1-C 沙箱验收（GPU2，2 boot + shadow 1 boot）
+
+**A/B 设计**：baseline-bf16 vs trained-bf16（b1-1@1500 导出，唯一变量=权重）；
+31 条 FINAL 提示词（ulmus 300..690 步进 13，全新）；per-prompt tok/step（含 bonus）；
+双统计门 + N_valid≥30 契约。**A 相 t3 sha = `b6117c312d39` 与 B0 基线逐位一致**（锚定）。
+
+**结果**（`blevel-evidence/accept-stats.json`）：
+
+```
+N_total=31  N_valid=31  N_positive=21  N_negative=10  N_tie=0
+mean Δ tok/step = +0.0876（3.407 → 3.494，+2.6%）   median Δ = +0.0546
+Gate B（bootstrap 95% CI）= [0.0113, 0.1719]  下界>0  ✓ PASS
+Gate A（Wilcoxon 正态近似）p = 0.0919 > 0.05           ✗ FAIL
+verdict = FAIL（冻结双门要求 A∧B；禁令③禁止事后扩验收集）
+```
+
+**两层成功判定**：科学成功 = **未达成**（Gate A 未过；方向一致、幅度真实但 n=31 对
++0.09 效应统计力不足）；工程成功（bf16 ≥3.5）= 未达成（3.494，差 0.006）。
+
+**t3 sha 门的前提否定（候选修改，治理记录）**：trained 引擎 t3 sha=`d1de8d63ec92`
+≠A。取证：B 相自身两跑逐位一致（引擎仍确定）；首分歧在字符 719 =
+**同义改写近平局分叉**（"cannot efficiently read and write data" vs "cannot process
+the data fast enough"）。机制=S4 已归因的布局非确定性：接受长度分布变化 → verify 批
+组合变化 → GDN 状态扫描归约序差 → 近平局翻转——**贪心输出与 drafter 无关这一前提在
+本引擎不成立**（连基线自身暖/冷都翻，P0 Gate 已裁该类良性）。门按 P0 语义标准重述：
+输出须连贯无垃圾/复读/结构破坏（B 文本符合）；逐字节等式不可达。
+
+## W4 shadow 迁移预筛（范围严控，单 boot 极小 probe）
+
+**provenance 四级 SHA**（`export.py` + quant 输出）：
+
+```
+bf16 ckpt 导出  e782419de5ce2a0c   (models/Qwen3.8-27B-DFlash2-b1)
+量化 recipe     8ac39a85a82929ec   (repo/drafter/quant_dflash2.py, GPTQ g128 对称)
+校准集          51eedabac2d51877   (repo/drafter/hessians_noctx.pt, 基线流量捕获)
+shadow drafter  b5460283b9d7527a   (models/Qwen3.8-27B-DFlash2-b1-w4, 1.19GiB)
+```
+
+8 提示词方向性 probe（非统计门）：**W4 对 bf16 基线平均 ≈ −0.12 tok/step**
+（+0.11×2 / −0.12×2 / −0.03 / −0.09 / −0.45 / −0.40）——训练收益未能清晰穿过量化。
+机制自洽：**收益载体 fc 恰是量化对象**（quant_dflash2 对 layers+fc 做 int4，selector
+恒 bf16 无损穿过），且 GPTQ Hessian 来自基线 drafter 流量、未对训练后分布重校准。
+
+## B1 终局结论
+
+1. **训练价值方向成立但未达显著门槛**：+0.088 tok/step（+2.6%），21/10/0 正负比，
+   CI 下界为正；Wilcoxon p=0.092。按冻结双门 = FAIL，如实记录。
+2. **增益归因**：全部候选侧收益来自 fc 的分布适配（监督门早已预告：基线 recall
+   96-98%，天花板效应）；selector 贡献 margin 深度。
+3. **量化是下一刀的约束**（shadow 结论）：B2 应先做量化敏感度（Hessian 对训练后
+   drafter 流量重校准；或 fc 提精度 --fc-bits 8/16——fc 仅 131M，bf16 只 +180MB），
+   **而非解冻 5 层**（三项禁令维持）。
+4. 复盘要点：DEV 语料引擎 k 已 3.99（接受天花板近）；若未来重测，n≥60 预注册。
+
+## 复现（B1-B/C）
+
+```bash
+cd eval/vllm/b1
+CUDA_VISIBLE_DEVICES=4 /data/vllm/venv/bin/python gate.py --tag base   # DEV 基线门
+./run_arms.sh                                                          # 串行四臂+门
+/data/vllm/venv/bin/python export.py --ckpt .../b1-1/ckpt-1500.pt --out ...
+# 沙箱 A/B：b0.env 模板，DRAFT 分别指向 baseline 与 export；accept_ab.py A/B/stats
+CUDA_VISIBLE_DEVICES=2 /data/vllm/venv/bin/python <repo>/drafter/quant_dflash2.py \
+    <export> <shadow> <repo>/drafter/hessians_noctx.pt                 # W4 shadow
+```
+
+训练产物：`/data/sandbox/ab-vllm/b1/ckpts/{zero,b1-1,b1-2,b1-3}/`（.pt 不入 git）；
+导出与 shadow：`/data/sandbox/ab-vllm/repo/models/Qwen3.8-27B-DFlash2-b1{,-w4}/`。
+

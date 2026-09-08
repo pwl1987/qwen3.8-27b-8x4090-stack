@@ -1,0 +1,18 @@
+{
+ "N_total": 31,
+ "N_valid": 31,
+ "N_positive": 21,
+ "N_negative": 10,
+ "N_tie": 0,
+ "mean_delta_tok_per_step": 0.0876,
+ "median_delta": 0.0546,
+ "bootstrap95_CI": [
+  0.0113,
+  0.1719
+ ],
+ "wilcoxon_p_normalapprox": 0.09193,
+ "t3_sha_A": "b6117c312d39",
+ "t3_sha_B": "d1de8d63ec92",
+ "t3_sha_match": false,
+ "verdict": "FAIL"
+}

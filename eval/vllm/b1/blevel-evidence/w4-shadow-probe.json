@@ -1,0 +1,82 @@
+[
+ {
+  "target_tokens": 512,
+  "tag": "W4",
+  "drafts": 87.0,
+  "accepted": 212.0,
+  "tok_per_step": 3.4367816091954024,
+  "sha12": "d1de8d63ec92",
+  "chars": 1429,
+  "sec": 8.8
+ },
+ {
+  "target_tokens": 300,
+  "tag": "W4",
+  "drafts": 76.0,
+  "accepted": 171.0,
+  "tok_per_step": 3.25,
+  "sha12": "5096329076cc",
+  "chars": 1078,
+  "sec": 7.9
+ },
+ {
+  "target_tokens": 352,
+  "tag": "W4",
+  "drafts": 87.0,
+  "accepted": 186.0,
+  "tok_per_step": 3.1379310344827585,
+  "sha12": "cde2a13eb264",
+  "chars": 1248,
+  "sec": 8.7
+ },
+ {
+  "target_tokens": 404,
+  "tag": "W4",
+  "drafts": 75.0,
+  "accepted": 157.0,
+  "tok_per_step": 3.0933333333333333,
+  "sha12": "c6b6dc16ea23",
+  "chars": 1047,
+  "sec": 7.6
+ },
+ {
+  "target_tokens": 456,
+  "tag": "W4",
+  "drafts": 69.0,
+  "accepted": 169.0,
+  "tok_per_step": 3.449275362318841,
+  "sha12": "9002ef9c7249",
+  "chars": 1017,
+  "sec": 7.0
+ },
+ {
+  "target_tokens": 508,
+  "tag": "W4",
+  "drafts": 87.0,
+  "accepted": 212.0,
+  "tok_per_step": 3.4367816091954024,
+  "sha12": "d1de8d63ec92",
+  "chars": 1429,
+  "sec": 9.0
+ },
+ {
+  "target_tokens": 560,
+  "tag": "W4",
+  "drafts": 94.0,
+  "accepted": 211.0,
+  "tok_per_step": 3.24468085106383,
+  "sha12": "82cf85c88f5e",
+  "chars": 1423,
+  "sec": 9.4
+ },
+ {
+  "target_tokens": 612,
+  "tag": "W4",
+  "drafts": 74.0,
+  "accepted": 165.0,
+  "tok_per_step": 3.22972972972973,
+  "sha12": "4ab7468723d2",
+  "chars": 1047,
+  "sec": 7.5
+ }
+]

@@ -125,7 +125,7 @@ def build_run(run_pairs, stream, prompt_len, ridx):
         C += v
         s = C - P0
         nrj = nr[j]
-        if nrj is None or s >= len(stream):
+        if nrj is None or (stream is not None and s >= len(stream)):
             prev_nr = nrj                  # terminal / unknown: context only
             continue
         acc = DRAFT_BLOCK - nrj
@@ -153,7 +153,7 @@ def build_run(run_pairs, stream, prompt_len, ridx):
         steps.append({"run": ridx, "j": j, "ctx_len_queries": C,
                       "num_valid_rows": v, "anchor": anchor,
                       "stream_pos": s, "labels": labels})
-        if mode == "legacy":
+        if mode == "legacy" and stream is not None:
             if s < len(stream):
                 chk["tot"] += 1
                 chk["ok"] += stream[s] == anchor

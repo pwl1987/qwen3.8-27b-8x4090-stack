@@ -1,0 +1,41 @@
+{
+ "tag": "b1-1-0500",
+ "ckpt": "/data/sandbox/ab-vllm/b1/ckpts/b1-1/ckpt-0500.pt",
+ "dev_runs": "30-37",
+ "fc_cos": {
+  "n": 2400,
+  "mean": 0.9999,
+  "p50": 0.9999,
+  "p10": 0.9999,
+  "min": 0.999
+ },
+ "sh_cos": {
+  "n": 2100,
+  "mean": 0.9906,
+  "p50": 0.9986,
+  "p10": 0.9951,
+  "min": 0.603
+ },
+ "top16": {
+  "n": 2100,
+  "mean": 14.9748,
+  "p50": 15.0,
+  "p10": 14.0,
+  "min": 2.0
+ },
+ "recall": 0.9887,
+ "top1": 0.8419,
+ "mean_rank": 1.384,
+ "mean_margin": 5.224,
+ "own_walk_k": 0.5784,
+ "engine_k": 3.9855,
+ "n_steps": 300,
+ "gates": {
+  "top16_mean>=14": true,
+  "top16_p10>=12": true,
+  "top16_mean>=base-0.4": false,
+  "top16_p10>=base-1": true,
+  "dev_recall>=base": true
+ },
+ "baseline_tag": "base"
+}

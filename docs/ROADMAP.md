@@ -61,6 +61,20 @@ GPTQ 重校准只救回 +6.9%（115.4→122.7）；后训模型分布偏移的�
 | CandidateSelector 码本×2 + hidden_projection | ~254MB（rank=256） | 直接替换 |
 | 5 层 conv（kernel_projection）+ 注意力/MLP | ~1.4B | 可冻结 |
 
+**B1 已执行完毕（2026-09-08 晚，`eval/vllm/b1/REPORT.md`，四臂+沙箱 A/B+W4 shadow）**：
+- B1-A：五层复刻 B 级门全过（sh_cos 0.9999、top16 15.81、teacher 流 anchor 243/243、
+  k 2.51≈引擎 2.56）+ 平票契约 + teacher 监督 + 三组分 loss 训练闭环（zero 零更新断言）。
+- B1-B 四臂：**候选侧收益全部来自 fc**（b1-2 单独追平 recall 0.9908）；selector 贡献
+  margin（7.03 vs 6.47）；ΔL2/增益分解入档。引擎重叠漂移（15.76→13.9）= 训练重塑
+  候选分布的预期效应，adjudicated 非复刻损坏。
+- B1-C：**+0.088 tok/step（+2.6%），21/10/0，bootstrap CI [0.011,0.172] 过，Wilcoxon
+  p=0.092 未过 → 冻结双门判 FAIL（科学成功未达成，方向一致但 n=31 统计力不足）**；
+  工程目标 3.5 差 0.006。t3 sha 门前提被引擎布局非确定性否定（S4 机制同义改写分叉，
+  P0 裁良性类）。
+- **W4 shadow：收益未穿过量化**（8 probe 对基线 ≈ −0.12）——收益载体 fc 恰是 int4
+  量化对象且 Hessian 未重校准。**B2 优先级：量化敏感度（Hessian 对训练后流量重校准 /
+  fc 提精度 8-16bit），仍不解冻 5 层**。
+
 **在线蒸馏设计**（免落盘 5×5120/token 特征）：
 1. 引擎内进程起目标模型（capture_dflash2.py 同款挂钩），批量生成采
    （aux 层隐状态，真 next-token）对；
