@@ -1,0 +1,173 @@
+{
+ "label": "prod-recal",
+ "contract": {
+  "self_deterministic": true,
+  "sha12": "5884a57eaca7",
+  "chars": 1363,
+  "semantic": {
+   "ok": true,
+   "garbage": false,
+   "repeat_loop": false
+  }
+ },
+ "rows": [
+  {
+   "target_tokens": 512,
+   "tok_per_step": 3.1875,
+   "sha12": "5884a57eaca7",
+   "drafts": 0,
+   "accepted": 0,
+   "chars": 1363
+  },
+  {
+   "target_tokens": 300,
+   "tag": "prod-recal",
+   "drafts": 80.0,
+   "accepted": 169.0,
+   "tok_per_step": 3.1125,
+   "sha12": "4469d2599103",
+   "chars": 1085,
+   "sec": 8.0
+  },
+  {
+   "target_tokens": 313,
+   "tag": "prod-recal",
+   "drafts": 80.0,
+   "accepted": 169.0,
+   "tok_per_step": 3.1125,
+   "sha12": "4469d2599103",
+   "chars": 1085,
+   "sec": 8.0
+  },
+  {
+   "target_tokens": 339,
+   "tag": "prod-recal",
+   "drafts": 72.0,
+   "accepted": 149.0,
+   "tok_per_step": 3.0694444444444446,
+   "sha12": "b57fbf3a35d4",
+   "chars": 1020,
+   "sec": 7.3
+  },
+  {
+   "target_tokens": 352,
+   "tag": "prod-recal",
+   "drafts": 72.0,
+   "accepted": 149.0,
+   "tok_per_step": 3.0694444444444446,
+   "sha12": "b57fbf3a35d4",
+   "chars": 1020,
+   "sec": 7.2
+  },
+  {
+   "target_tokens": 391,
+   "tag": "prod-recal",
+   "drafts": 78.0,
+   "accepted": 154.0,
+   "tok_per_step": 2.9743589743589745,
+   "sha12": "32713d58412f",
+   "chars": 1037,
+   "sec": 7.8
+  },
+  {
+   "target_tokens": 404,
+   "tag": "prod-recal",
+   "drafts": 78.0,
+   "accepted": 154.0,
+   "tok_per_step": 2.9743589743589745,
+   "sha12": "32713d58412f",
+   "chars": 1037,
+   "sec": 7.8
+  },
+  {
+   "target_tokens": 443,
+   "tag": "prod-recal",
+   "drafts": 68.0,
+   "accepted": 170.0,
+   "tok_per_step": 3.5,
+   "sha12": "a48923b16be3",
+   "chars": 1025,
+   "sec": 6.8
+  },
+  {
+   "target_tokens": 456,
+   "tag": "prod-recal",
+   "drafts": 68.0,
+   "accepted": 170.0,
+   "tok_per_step": 3.5,
+   "sha12": "a48923b16be3",
+   "chars": 1025,
+   "sec": 6.8
+  },
+  {
+   "target_tokens": 495,
+   "tag": "prod-recal",
+   "drafts": 72.0,
+   "accepted": 157.0,
+   "tok_per_step": 3.1805555555555554,
+   "sha12": "6171dc0fc179",
+   "chars": 1046,
+   "sec": 7.2
+  },
+  {
+   "target_tokens": 508,
+   "tag": "prod-recal",
+   "drafts": 96.0,
+   "accepted": 210.0,
+   "tok_per_step": 3.1875,
+   "sha12": "5884a57eaca7",
+   "chars": 1363,
+   "sec": 9.5
+  },
+  {
+   "target_tokens": 547,
+   "tag": "prod-recal",
+   "drafts": 96.0,
+   "accepted": 210.0,
+   "tok_per_step": 3.1875,
+   "sha12": "5884a57eaca7",
+   "chars": 1363,
+   "sec": 9.5
+  },
+  {
+   "target_tokens": 560,
+   "tag": "prod-recal",
+   "drafts": 62.0,
+   "accepted": 171.0,
+   "tok_per_step": 3.7580645161290325,
+   "sha12": "c1ad2c650d5a",
+   "chars": 925,
+   "sec": 6.3
+  },
+  {
+   "target_tokens": 599,
+   "tag": "prod-recal",
+   "drafts": 63.0,
+   "accepted": 165.0,
+   "tok_per_step": 3.619047619047619,
+   "sha12": "df66b7d7a6f0",
+   "chars": 991,
+   "sec": 6.4
+  },
+  {
+   "target_tokens": 612,
+   "tag": "prod-recal",
+   "drafts": 63.0,
+   "accepted": 165.0,
+   "tok_per_step": 3.619047619047619,
+   "sha12": "df66b7d7a6f0",
+   "chars": 991,
+   "sec": 6.4
+  },
+  {
+   "target_tokens": 651,
+   "tag": "prod-recal",
+   "drafts": 73.0,
+   "accepted": 187.0,
+   "tok_per_step": 3.5616438356164384,
+   "sha12": "1b3551a9dbc8",
+   "chars": 1103,
+   "sec": 7.4
+  }
+ ]
+}

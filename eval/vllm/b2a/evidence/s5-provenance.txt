@@ -1,0 +1,2 @@
+15696323b36464b1 /data/sandbox/ab-vllm/repo/models/Qwen3.8-27B-DFlash2-b1-w4recal/model.safetensors
+04ce5c5d4473e7c0 /data/sandbox/ab-vllm/b1/hessians-capture/hessians_trained_noctx.pt

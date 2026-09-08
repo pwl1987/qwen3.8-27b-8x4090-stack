@@ -1,0 +1,13 @@
+{
+ "W_norm": 1959.99,
+ "train_signal_L2": 10.6783,
+ "train_signal_rel": 0.005448,
+ "int4_noise_L2_vs_trained": 258.4845,
+ "int4_noise_rel_vs_trained": 0.131881,
+ "noise_to_signal_ratio": 24.21,
+ "rows_snr_gt1_frac": 0.0,
+ "row_snr_p50_p10": [
+  0.041,
+  0.038
+ ]
+}
