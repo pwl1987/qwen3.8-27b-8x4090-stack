@@ -1,0 +1,4 @@
+D239000: turn1(a1==b1)=CLEAN  turn2(a2==b2)=WRONG
+  t2分歧@186: A=…'sue, including the cause of th' B=…'sue, including potential solut'
+  lens: a1=467 b1=467 a2=528 b2=518
+VERDICT: CORRUPT

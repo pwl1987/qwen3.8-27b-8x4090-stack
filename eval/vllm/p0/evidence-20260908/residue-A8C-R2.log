@@ -1,0 +1,13 @@
+D1@39000: CLEAN  t1=951 t2=951
+D1@39600: CLEAN  t1=1406 t2=1406
+D1@40200: WRONG  t1=1019 t2=1019
+  分歧@23: A=…'e is that the `NewDefaultServe' B=…'e is that the `Accept` header '
+D1@40800: CLEAN  t1=1170 t2=1170
+D2@39000: WRONG  t1=3145 t2=2935
+  分歧@0: A=…'The document be' B=…'duct Register R'
+D2@39600: WRONG  t1=1283 t2=1283
+  分歧@137: A=…'or the GraphQL handler, includ' B=…'or the GraphQL server, includi'
+D2@40200: CLEAN  t1=584 t2=583
+D2@40800: CLEAN  t1=267 t2=266
+
+总结: 3 组损坏 / 12

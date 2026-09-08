@@ -1,0 +1,17 @@
+D1@39000: CLEAN  t1=966 t2=966
+D1@39600: WRONG  t1=1406 t2=1406
+  分歧@623: A=…'lse\n    }\n\n    // ...\n}\n```\n\nA' B=…'lse\n    }\n\n    mediaType, _, e'
+D1@40200: WRONG  t1=830 t2=830
+  分歧@184: A=…'st.go` file to check for the p' B=…'st.go` file to not reject requ'
+D1@40800: WRONG  t1=892 t2=892
+  分歧@28: A=…'ue is that the HTTP POST trans' B=…'ue is that the `Accept` header'
+D2@39000: WRONG  t1=467 t2=518
+  分歧@186: A=…'sue, including the cause and p' B=…'sue, including potential solut'
+D2@39600: WRONG  t1=928 t2=928
+  分歧@192: A=…'rt. However, the HTTP POST tra' B=…'rt. However, this default tran'
+D2@40200: WRONG  t1=474 t2=473
+  分歧@13: A=…'The document begins by stati' B=…'The document mentions the is'
+D2@40800: WRONG  t1=267 t2=266
+  分歧@142: A=…' of the problem along with pot' B=…' of the problem, including the'
+
+总结: 7 组损坏 / 12
