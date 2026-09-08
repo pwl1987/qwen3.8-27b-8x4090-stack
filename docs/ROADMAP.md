@@ -44,6 +44,12 @@ B 开工前对生产主力做的同源体检（工具 `eval/llamacpp/semantic_ga
 
 ## 方向 B：DFlash2 drafter 深度重训 → 裸接受率 3.0→3.5+（根治）
 
+**B0 已过门（2026-09-08，`eval/vllm/b0/REPORT.md`）**：bf16 双侧纯 torch 复刻对齐——fc 余弦
+2065/2065=1.0；top-16 overlap mean 15.83/p10 15/min 15（门 14/12）；selector scores 逐位 0 差；
+走链语义判明=逐步贪心（98.8% 一致，3 例平票裁定序差）。附带发现：bf16 引擎 eager 完全确定
+（t3 3 跑 sha 一致）；t3 上 bf16 草稿 2.56 tok/step（recal 3.04）→ 重训空间在分布适配。
+剩余一级：5 层 conv/attn 的 torch 复刻（in/out 两侧张量已备）→ 端到端可微 → fc+selector 先训。
+
 GPTQ 重校准只救回 +6.9%（115.4→122.7）；后训模型分布偏移的根治是蒸馏重训。
 接受率 3.04→3.5 ≈ 130→150 tok/s，且不依赖任何 bug 修复。
 

@@ -1,0 +1,200 @@
+--- /app/venv/lib/python3.12/site-packages/vllm/v1/worker/gpu/spec_decode/dflash2/speculator.py.orig	2026-09-06 00:44:03.000000000 +0000
++++ /app/venv/lib/python3.12/site-packages/vllm/v1/worker/gpu/spec_decode/dflash2/speculator.py	2026-09-08 07:14:03.000000000 +0000
+@@ -1,12 +1,59 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+ 
++import json
+ import os
+ import time
+ from typing import Any
+ 
+ import torch
+ 
++
++# --- debug instrumentation: file-flag gated (/tmp/dflash_trace.on), jsonl out ---
++_DF_TRACE_FH = None  # None=unchecked, False=off, else open file
++
++
++def _df_trace(ev: dict) -> None:
++    global _DF_TRACE_FH
++    if _DF_TRACE_FH is None:
++        _DF_TRACE_FH = (
++            open("/tmp/dflash_trace.jsonl", "a", buffering=1)
++            if os.path.exists("/tmp/dflash_trace.on")
++            else False
++        )
++    if _DF_TRACE_FH:
++        ev["t"] = round(time.time(), 3)
++        _DF_TRACE_FH.write(json.dumps(ev) + "\n")
++
++
++# ---- B0 ask-level dump: bf16 双侧数值复刻的金标准采集 ----
++# 门: /tmp/dflash_ask.on。每步两条记录:
++#   in  (propose 入口): aux_hidden_states 拼接(fc 输入, num_tokens×25600) + 本步输入 token
++#   out (_generate_draft 出口): fc 输出(self.hidden_states)、drafter 5 层输出(sample hidden)、
++#       candidate top-16、unary、sanitized scores、selector 选中路径、anchor token
++# 注意: 须 --enforce-eager——FULL cudagraph 下 _generate_draft 被捕获, Python 只在捕获期执行一次。
++_ASK = {"steps": [], "n": 0, "max_steps": 600}
++
++
++def _ask_on() -> bool:
++    return os.path.exists("/tmp/dflash_ask.on")
++
++
++def _ask_add(rec: dict) -> None:
++    if len(_ASK["steps"]) >= _ASK["max_steps"]:
++        return
++    _ASK["steps"].append(rec)
++    if len(_ASK["steps"]) >= 40:
++        _ask_flush()
++
++
++def _ask_flush() -> None:
++    if not _ASK["steps"]:
++        return
++    torch.save(_ASK["steps"], "/tmp/dflash_ask-%04d.pt" % _ASK["n"])
++    _ASK["n"] += 1
++    _ASK["steps"] = []
++
+ from vllm.config import VllmConfig
+ from vllm.logger import init_logger
+ from vllm.config.compilation import CUDAGraphMode
+@@ -110,6 +157,11 @@
+             realized,
+             mask=mask & valid,
+         )
++        # port(kvarn-v2): NaN scores make `scores == best` match nowhere, so
++        # index becomes BLOCK_K and the load below reads past the candidate
++        # row -- a garbage token id that later kills the embedding gather.
++        # Clamp to candidate 0; a wrong draft is just rejected by the verify.
++        index = tl.where(index >= top_k, 0, index)
+         token = tl.load(candidate_ptr + candidate_base + index, mask=valid, other=0)
+         tl.store(tokens_ptr + flat, token, mask=valid)
+         previous = index
+@@ -165,7 +217,9 @@
+             torch.arange(self.max_num_reqs, dtype=torch.int64, device=device)
+             * self.num_query_per_req
+         )
+-        self._selector_tokens = torch.empty(
++        # port(kvarn-v2): zeros, not empty -- an unwritten slot must hold a
++        # valid token id, never uninitialized VRAM.
++        self._selector_tokens = torch.zeros(
+             (self.max_num_reqs, self.draft_block),
+             dtype=self.draft_tokens.dtype,
+             device=device,
+@@ -330,6 +384,12 @@
+             logger.info("DFlash2 chains on (minmatch=%d)", self._chain_minmatch)
+ 
+         if self._lookup:
++            _df_trace({
++                "ev": "init", "k": self.num_speculative_steps,
++                "draft_block": self.draft_block, "adaptive": self._adaptive,
++                "sticky_default": self._lookup_sticky, "lookup": True,
++                "chain": getattr(self, "_chain", False),
++            })
+             logger.info(
+                 "DFlash2 lookup-augmented drafting on (k=%d nmin=%d nmax=%d nstrong=%d "
+                 "agree=%d nmin_tail=%d longmin=%d search=%d)",
+@@ -355,11 +415,13 @@
+             # This step proposes purely from context; the scheduler must verify
+             # the whole block or the chain's tail is thrown away.
+             self._last_asked = self.num_speculative_steps
++            _df_trace({"ev": "ask", "src": "chain", "n": self.num_speculative_steps})
+             return self.num_speculative_steps
+         if not self._adaptive:
+             return None
+         emitted = getattr(self, "last_num_emitted", None)
+         if emitted is None:
++            _df_trace({"ev": "ask", "src": "warmup", "n": self.draft_block})
+             return self.draft_block
+         if self.draft_max_seq_len <= self._lookup_cheap_ctx:
+             # An extra verify position costs attention proportional to the KV length: +6%
+@@ -377,6 +439,7 @@
+         fused = (self._take_flags[:num_reqs] > 0) & (emitted >= 1 + self.draft_block)
+         self._flags_cpu[:num_reqs].copy_(fused, non_blocking=True)
+         self._flags_n = num_reqs
++        prev_want_in, sticky_in = self._prev_want, self._sticky
+         # Two qualifying steps in a row, not one: a single saturated step happens in the
+         # middle of ordinary prose (a quoted phrase, a repeated list marker) and the long
+         # block it buys is then wasted. Waiting for the second one costs the first step of
+@@ -391,6 +454,14 @@
+         else:
+             long_block, self._sticky = False, 0
+         self._prev_want = want
++        nct = []
++        if self._req_states is not None:
++            nct = self._req_states.num_computed_tokens_np[:num_reqs].tolist()
++        _df_trace({
++            "ev": "ask", "src": "adaptive", "n": self.num_speculative_steps if long_block else self.draft_block,
++            "long": bool(long_block), "want": want, "prev_want_in": bool(prev_want_in),
++            "sticky_in": sticky_in, "emitted": emitted.tolist(), "nct": nct,
++        })
+         return self.num_speculative_steps if long_block else self.draft_block
+ 
+     def propose(
+@@ -412,6 +483,32 @@
+         mm_inputs=None,
+         is_profile=False,
+     ):
++        if (
++            _ask_on()
++            and not dummy_run
++            and not is_profile
++            and aux_hidden_states
++            and len(_ASK["steps"]) < _ASK["max_steps"]
++        ):
++            try:
++                nt = int(input_batch.num_tokens)
++                if 0 < nt <= 8192:
++                    aux = torch.cat(
++                        [h for h in aux_hidden_states if h is not None], dim=-1
++                    )[:nt].detach().to("cpu", copy=True)
++                    toks = None
++                    for _attr in ("token_ids_gpu", "token_ids_cpu", "token_ids"):
++                        v = getattr(input_batch, _attr, None)
++                        if torch.is_tensor(v):
++                            toks = v[:nt].detach().to("cpu", copy=True)
++                            break
++                        if v is not None:
++                            toks = torch.as_tensor(list(v[:nt]))
++                            break
++                    _ask_add({"kind": "in", "num_tokens": nt, "aux": aux,
++                              "input_ids": toks})
++            except Exception as _e:  # noqa: BLE001 — trace 永不影响主流程
++                _df_trace({"ev": "ask_in_err", "err": repr(_e)[:200]})
+         # Chain eligibility is decided HERE, on the host, once per step --
+         # propose() is never captured, so this state machine survives FULL
+         # cudagraph replays. Single-request only, like the sticky long block:
+@@ -728,7 +825,31 @@
+             hidden_states,
+             anchor_token_ids,
+         )
++        # port(kvarn-v2): degenerate (ultra-peaked) distributions can NaN the
++        # selector scores -- KVarN quantization noise on verbatim-reproduction
++        # content tips them over. NaN poisons both the path walk (index runs
++        # past the candidate row) and the cached draft logits the rejection
++        # sampler divides by, silently accepting wrong tokens. Sanitize to
++        # finite values: affected candidates keep a valid q, verify stays
++        # exact. Pure GPU op, cudagraph-capture-safe.
++        scores = torch.nan_to_num(scores, nan=-1e30, posinf=1e30, neginf=-1e30)
+         self._sample_path(candidate_ids, scores, num_reqs)
++        if _ask_on() and len(_ASK["steps"]) < _ASK["max_steps"]:
++            try:
++                _ask_add({
++                    "kind": "out",
++                    "num_reqs": int(num_reqs),
++                    "num_tokens_padded": int(num_tokens_padded),
++                    "fc_out": self.hidden_states[:num_tokens_padded].detach().to("cpu", copy=True),
++                    "sample_hidden": hidden_states.detach().to("cpu", copy=True),
++                    "candidate_ids": candidate_ids.detach().to("cpu", copy=True),
++                    "unary": unary_logits.detach().to("cpu", copy=True),
++                    "scores": scores.detach().to("cpu", copy=True),
++                    "selector_tokens": self._selector_tokens[:num_reqs].detach().to("cpu", copy=True),
++                    "anchor": anchor_token_ids.detach().to("cpu", copy=True),
++                })
++            except Exception as _e:  # noqa: BLE001
++                _df_trace({"ev": "ask_out_err", "err": repr(_e)[:200]})
+         self._cache_draft_logits(candidate_ids, num_sample)
+         self.draft_tokens[:num_reqs, : self.draft_block].copy_(
+             self._selector_tokens[:num_reqs]
