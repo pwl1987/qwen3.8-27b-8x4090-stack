@@ -1,0 +1,5 @@
+<functions>
+<function=execute_bash>
+<parameter=command>head -20 /testbed/graphql/handler/transport/sse_test.go</parameter>
+</function>
+</functions>

@@ -1,0 +1,12 @@
+{
+ "tag": "bootA",
+ "counts": {
+  "UNRESOLVED": 7,
+  "BENIGN-DIFF": 3,
+  "EXACT": 2,
+  "OK": 5,
+  "FAIL": 0
+ },
+ "PASS": false,
+ "ts": "2026-09-08 15:02:54"
+}

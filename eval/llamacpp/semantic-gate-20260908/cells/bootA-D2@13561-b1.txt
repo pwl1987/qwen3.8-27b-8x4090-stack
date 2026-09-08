@@ -1,0 +1,1 @@
+这份文档描述了一个编程代理的任务，旨在解决 gqlgen 库中因 HTTP POST 传输层错误拒绝包含 `text/event-stream` Accept 头的请求而导致的 "transport not supported" 错误。文档详细列出了从探索代码库、复现问题、分析根因到实施修复、验证解决方案和运行单元测试的完整步骤。最终目标是修改非测试文件，使 HTTP POST 传输层不再因 Accept 头中包含 SSE 类型而拒绝处理普通的 GraphQL 查询和变更请求。

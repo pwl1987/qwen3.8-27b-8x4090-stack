@@ -1,0 +1,30 @@
+<functions>
+<function=execute_bash>
+<parameter=command>grep -r "OperationType" /testbed/graphql/*.go | head -10</parameter>
+</function>
+<function=execute_bash>
+<parameter=command>grep -r "ast.OperationType" /testbed --include="*.go" | grep -v "_test.go" | head -10</parameter>
+</function>
+</functions>
+
+[tool]
+Exit code: 0
+Execution output of [execute_bash]:
+[STDOUT]
+/testbed/graphql/context_operation.go:func (c *OperationContext) OperationType() ast.OperationType {
+
+[tool]
+Exit code: 0
+Execution output of [execute_bash]:
+[STDOUT]
+/testbed/graphql/context_operation.go:func (c *OperationContext) OperationType() ast.OperationType {
+/testbed/graphql/executor/executor.go:func (e *Executor) CreateOperationContext(ctx context.Context, params *RawParams) (*OperationContext, *gqlerror.Error) {
+/testbed/graphql/executor/executor.go:func (e *Executor) CreateOperationContext(ctx context.Context, params *RawParams) (*OperationContext, *gqlerror.OperationError) {
+/testbed/graphql/executor/executor.go:		if op.OperationType == ast.OperationTypeSubscription {
+/testbed/graphql/executor/executor.go:		if op.OperationType == ast.OperationTypeSubscription {
+
+[tool]
+<functions>
+<function=str_replace_editor>
+<parameter=command>view</parameter>
+<parameter=path>/testbed/graphql/executor/executor.go</parameter>

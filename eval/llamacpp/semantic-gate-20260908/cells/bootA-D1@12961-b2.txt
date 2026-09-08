@@ -1,0 +1,25 @@
+<functions>
+<function=execute_bash>
+<parameter=command>head -50 /testbed/graphql/handler/transport/sse_test.go</parameter>
+</function>
+</functions>
+
+[tool]
+Exit code: 0
+Execution output of [execute_bash]:
+[STDOUT]
+package transport_test
+
+import (
+	transport "github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/99designs/gqlgen/graphql/handler/testserver"
+	"net/http"
+	"github.com/stretchr/testify/assert"
+	"strings"
+	"net/http/httptest"
+	"testing"
+	"time"
+	"io"
+	"encoding/json"
+	"fmt"
+	"github.com/99designs/gqlgen/graphql

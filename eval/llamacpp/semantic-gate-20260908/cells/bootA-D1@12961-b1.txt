@@ -1,0 +1,40 @@
+<functions>
+<function=execute_bash>
+<parameter=command>grep -r "Operation" /testbed/graphql/context_operation.go | head -20</parameter>
+</function>
+<function=str_replace_editor>
+<parameter=command>view</parameter>
+<parameter=path>/testbed/graphql/handler/transport/sse_test.go</parameter>
+</function>
+</functions>
+
+[tool]
+Exit code: 0
+Execution output of [execute_bash]:
+[STDOUT]
+type RequestContext = OperationContext
+type OperationContext struct {
+func (c *OperationContext) Validate(ctx context.Context) error {
+func GetOperationContext(ctx context.Context) *OperationContext {
+func WithOperationContext(ctx context.Context, rc *OperationContext) context.Context {
+func HasOperationContext(ctx context.Context) bool {
+func (c *OperationContext) Error
+
+[tool]
+Execution output of [str_replace_editor]:
+Here's the result of running `cat -n` on /testbed/graphql/handler/transport/sse_test.go:
+     1 package transport_test
+     2 
+     3 import (
+     transport "github.com/99designs/gqlgen/graphql/handler/transport"
+     "github.com/99designs/gqlgen/graphql/handler/testserver"
+     "net/http"
+     "github.com/stretchr/testify/assert"
+     "strings"
+     "net/http/httptest"
+     "testing"
+     "time"
+     "io"
+     "encoding/json"
+     "fmt"
+     "github.com/99designs/gqlgen/graphql

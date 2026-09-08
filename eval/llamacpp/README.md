@@ -8,3 +8,7 @@
 - `rft/`：RFT 验证沙箱（Docker --network none --read-only --cap-drop ALL，MBPP sanitized_test；
   257 路 16.1s 全 pass，瓶颈在 docker spawn）
 - `spec_sandbox.sh` / `dflash_vram_sweep.sh`：spec 四配置矩阵 / DFlash2 VRAM 扫描
+- `semantic_gate.py`：**生产语义 Gate**（2026-09-08，probe/matrix/canary/cmp）——冷/暖×单/多轮×
+  cache-reuse×DFlash 草稿的语义稳定性四层判定（EXACT/BENIGN-DIFF/UNRESOLVED/FAIL，零 LLM
+  Judge，阈值冻结）。结案：FAIL=0、唯一分歧轴=冷-暖近平局翻转（全部裁良性）、跨副本/跨重启
+  逐字节一致 → 现产配置冻结。证据与逐条复核见 `semantic-gate-20260908/report.md`

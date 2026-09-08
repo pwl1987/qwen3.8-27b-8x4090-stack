@@ -1,0 +1,42 @@
+<functions>
+<function=execute_bash>
+<parameter=command>grep -r "Operation" /testbed/graphql/context_operation.go | head -20</parameter>
+</function>
+<function=str_replace_editor>
+<parameter=command>view</parameter>
+<parameter=path>/testbed/graphql/context_operation.go</parameter>
+</function>
+</functions>
+
+[tool]
+Exit code: 0
+Execution output of [execute_bash]:
+<STDOUT>
+package graphql
+type Operation struct {
+type OperationContext struct {
+func WithOperationContext(ctx context.Context, oc *OperationContext) context.Context {
+func GetOperationContext(ctx context.Context) *OperationContext {
+func (oc *OperationContext) Operation() *Operation {
+func (oc *OperationContext) OperationName() string {
+func (oc *OperationContext) OperationType() ast.OperationType {
+
+[tool]
+Execution output of [str_replace_editor]:
+Here's the result of running `cat -n` on /testbed/graphql/context_operation.go:
+     1 package graphql
+     2 
+     3 import (
+     4         "context"
+     3         "github.com/vektah/gqlparser/v2/ast"
+     4 )
+     5 
+     6 type Operation struct {
+     7         Name     string
+     8         Type     ast.OperationType
+     9         Document *ast.QueryDocument
+     10 }
+     10 
+    11 type OperationContext struct {
+    12         Operation *Operation
+    13         Variables map

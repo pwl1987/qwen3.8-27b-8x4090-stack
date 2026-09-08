@@ -1,0 +1,1 @@
+这份文档描述了一个编程代理在 Go 代码仓库中解决 GitHub 问题的过程。问题涉及 gqlgen 库在 v0.17.50 版本中，当客户端发送包含 `text/event-stream` Accept 头的非订阅请求时，HTTP POST 传输层错误地拒绝处理，导致 "transport not supported" 错误。代理通过探索代码库、定位问题根源（http_post.go 中的 Supports 方法）、分析修复方案，最终实施修改以解决该问题。

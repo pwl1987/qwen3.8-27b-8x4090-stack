@@ -1,0 +1,1 @@
+该文档的核心主旨是指导一个编程代理解决 gqlgen 库中因版本更新导致的“transport not supported”错误，具体是修复 HTTP POST 传输层错误拒绝 Accept 头包含 text/event-stream 的非订阅请求的问题。代理需通过探索代码、复现问题、分析根因、实施修复、验证解决方案、运行单元测试和测试边缘案例等步骤，确保问题得到彻底解决且不影响现有功能。 ZEBRA-3f9a2c

@@ -1,0 +1,1 @@
+该文档描述了一个编程代理解决 gqlgen 库中因 HTTP POST 传输层错误拒绝包含 `text/event-stream` Accept 头的非订阅请求而导致 "transport not supported" 错误的任务。代理已定位到 `http_post.go` 中 `Supports` 方法的问题代码，并计划通过修改逻辑使非订阅请求能正常由 HTTP POST 处理，同时确保 SSE 传输仅用于订阅操作。ZEBRA-3f9a2c

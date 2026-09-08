@@ -1,0 +1,1 @@
+这份文档主要描述了一个关于 gqlgen 库在 v0.17.50 版本中出现的 bug，其中 HTTP POST 传输层错误地拒绝了包含 `text/event-stream` Accept 头的请求，导致使用 urql 等客户端库的用户遇到 "transport not supported" 错误。文档详细分析了问题的根本原因，即 POST 传输层的 `Supports` 方法过于严格地检查 Accept 头，而忽略了 SSE 传输层应该只处理订阅操作的事实。最后，文档提出了一个修复方案，即让 SSE 传输层只支持订阅操作，而 HTTP POST 传输层不再因为 Accept 头中包含 `text/event-stream` 而拒绝请求。

@@ -1,15 +1,17 @@
-# Qwen3.8-27B GGUF (iq4_xs+MTP) —— llama.cpp 推理服务(4副本) + OpenResty 动态LB + 可选网页聊天
+# Qwen3.8-27B GGUF (coding-v1.1 iq4xs + DFlash2 草稿) —— llama.cpp 推理服务 + OpenResty 动态LB + 可选网页聊天
 #
-# 起全部4副本:        docker compose up -d
-# 加网页聊天界面:      sudo ufw allow 3000/tcp && docker compose --profile ui up -d
-#                     浏览器开 http://<LAN-IP>:3000
-# 看日志:             docker logs -f qwen27b
-# 停止:               docker compose down
+# 默认 2 副本(GPU0/1):    docker compose up -d
+# 恢复 4 副本(占 GPU0-3):  docker compose --profile full up -d   # 还需把 lb/route.lua 的 backends 加回 r2/r3
+# 加网页聊天界面:          sudo ufw allow 3000/tcp && docker compose --profile ui up -d
+# 看日志:                 docker logs -f qwen27b
+# 停止:                   docker compose down
 #
-# 架构: 客户端 → OpenResty(Lua):8000 → 4×llama-server (每副本1张卡, GPU0-3; GPU4-7预留)
-#   动态路由(lb/route.lua): 会话粘滞优先(前缀缓存命中), 目标副本4slot满载时漂到最闲副本,
-#   新会话接入最闲副本, 副本不健康自动摘除, 会话映射TTL 30分钟
-#   单副本: 4 slot × 256K, ~100-113 tok/s(MTP); 4副本 = 16 slot 并发上限(超出排队)
+# 架构: 客户端 → OpenResty(Lua):8000 → llama-server 副本(每副本1卡; 默认 GPU0/1)
+#   动态路由(lb/route.lua): 会话粘滞优先(前缀缓存命中), 目标副本满载时漂到最闲副本,
+#   新会话接入最闲副本, 副本不健康自动摘除, 会话映射TTL 30分钟; 2026-09-05 缩容2副本
+#   释放 GPU2-7 给训练/实验(4副本恢复点: lb/route.lua.bak-20260905-4replica)
+#   单副本: 1 slot × 256K (-np 2 在 256K+草稿双槽缓冲下 OOM, 必须 -np 1), ~90-113 tok/s(DFlash)
+# 2026-09-08 语义 Gate 通过(eval/llamacpp/semantic-gate-20260908/): 现产配置冻结
 x-llama-base:
   &llama-base
   image: llama-server:cuda12.4-b10715   # 2026-08-31 升级(源码 /data/build/llama.cpp-new); 旧版镜像 cuda12.4-local 保留可回滚
@@ -18,10 +20,11 @@ x-llama-base:
   volumes:
     - /data/models:/models
   command: >
-    -m /models/Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf
+    -m /models/Qwen3.8-27B-coding-v1.1-iq4xs.gguf
     --host 0.0.0.0
     --port 8080
     -c 262144
+    -np 1
     -ngl 999
     --cache-type-k q4_0
     --cache-type-v q4_0
@@ -32,10 +35,10 @@ x-llama-base:
     --jinja
     -a qwen3.8-27b
     --metrics
-    --spec-type draft-mtp
-  # 2026-08-29 终配: 256K 上下文 + MTP + KV q4_0, 单副本显存 23.9G/24.5G(97%)
-  #   生成 ~100-113 tok/s, 200K 针测试通过(q4 无损), 前缀缓存复用 2048
-  # 2026-08-30 横向扩容LB; 2026-08-31 缩4副本+OpenResty动态路由
+    --spec-type draft-dflash
+    -md /models/Qwen3.8-27B-DFlash2-Q4_K_M.gguf
+    --spec-draft-n-max 7
+  # 2026-09-05 终配: coding-v1.1 + DFlash2 草稿(Q4_K_M, n-max 7) + 256K + KV q4_0
   # 历史配置: .bak-20260829(256K无MTP) | .bak-20260829-mtp128k(128K+MTP+q8) | .bak-20260829-pre-lb(单副本)
   # 加 API 密钥: 在上面 command 末尾补一行 --api-key 你的密钥
 
@@ -48,24 +51,7 @@ services:
       - driver: nvidia
         device_ids: ['0']
     ports:
-      - "127.0.0.1:8081:8080"    # 只走本机 nginx, 不直接对外
-    command: >
-      -m /models/Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf
-      --host 0.0.0.0
-      --port 8080
-      -c 262144
-      -np 2
-      -ngl 999
-      --cache-type-k q4_0
-      --cache-type-v q4_0
-      --spec-draft-type-k q8_0
-      --spec-draft-type-v q8_0
-      -fa on
-      --cache-reuse 2048
-      --jinja
-      -a qwen3.8-27b
-      --metrics
-      --spec-type draft-mtp
+      - "127.0.0.1:8081:8080"    # 只走本机 LB, 不直接对外
 
   r1:
     <<: *llama-base
@@ -75,80 +61,28 @@ services:
         device_ids: ['1']
     ports:
       - "127.0.0.1:8082:8080"
-    command: >
-      -m /models/Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf
-      --host 0.0.0.0
-      --port 8080
-      -c 262144
-      -np 2
-      -ngl 999
-      --cache-type-k q4_0
-      --cache-type-v q4_0
-      --spec-draft-type-k q8_0
-      --spec-draft-type-v q8_0
-      -fa on
-      --cache-reuse 2048
-      --jinja
-      -a qwen3.8-27b
-      --metrics
-      --spec-type draft-mtp
 
-  # —— 大会话池副本(r2/r3): 单 slot 独享 256K, 无驱逐, 大上下文会话每轮增量 prefill ——
-  # (共享池多 slot 模式下, 大会话的 KV 驻留最易被 LRU 驱逐 → 每轮全量重 prefill 的死结)
+  # —— 扩容副本(r2/r3): 默认不启动(profile full); 恢复时还需把 lb/route.lua 的
+  #    backends 加回 "r2:8080","r3:8080"(备份 lb/route.lua.bak-20260905-4replica) ——
   r2:
     <<: *llama-base
+    profiles: ["full"]
     container_name: qwen27b-r2
     gpus:
       - driver: nvidia
         device_ids: ['2']
     ports:
       - "127.0.0.1:8083:8080"
-    command: >
-      -m /models/Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf
-      --host 0.0.0.0
-      --port 8080
-      -c 262144
-      -np 1
-      -ngl 999
-      --cache-type-k q4_0
-      --cache-type-v q4_0
-      --spec-draft-type-k q8_0
-      --spec-draft-type-v q8_0
-      -fa on
-      --cache-reuse 2048
-      --jinja
-      -a qwen3.8-27b
-      --metrics
-      --spec-type draft-mtp
 
   r3:
     <<: *llama-base
+    profiles: ["full"]
     container_name: qwen27b-r3
     gpus:
       - driver: nvidia
         device_ids: ['3']
     ports:
       - "127.0.0.1:8084:8080"
-    command: >
-      -m /models/Qwen3.8-27B-Heretic-Ara-iq4_xs-3.0-mtp.gguf
-      --host 0.0.0.0
-      --port 8080
-      -c 262144
-      -np 1
-      -ngl 999
-      --cache-type-k q4_0
-      --cache-type-v q4_0
-      --spec-draft-type-k q8_0
-      --spec-draft-type-v q8_0
-      -fa on
-      --cache-reuse 2048
-      --jinja
-      -a qwen3.8-27b
-      --metrics
-      --spec-type draft-mtp
-
-
-
 
   lb:
     image: docker.m.daocloud.io/openresty/openresty:1.25.3.2-alpine
@@ -157,8 +91,6 @@ services:
     depends_on:
       - llama
       - r1
-      - r2
-      - r3
     volumes:
       - ./lb/qwen27b.conf:/etc/nginx/conf.d/qwen27b.conf:ro
       - ./lb:/etc/nginx/lb:ro

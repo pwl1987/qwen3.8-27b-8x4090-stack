@@ -1,0 +1,8 @@
+<functions>
+<function=execute_bash>
+<parameter=command>grep -r "ast.OperationType" /testbed/graphql --include="*.go" | grep -v "_test.go" | head -10</parameter>
+</function>
+<function=execute_bash>
+<parameter=command>grep -r "OperationType" /testbed/graphql/executor --include="*.go" | grep -v "_test.go" | head -10</parameter>
+</function>
+</functions>

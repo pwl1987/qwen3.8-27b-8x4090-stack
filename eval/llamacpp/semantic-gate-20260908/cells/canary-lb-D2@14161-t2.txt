@@ -1,0 +1,3 @@
+ZEBRA-3f9a2c
+
+文档中第一段提到：“You are a programming agent who is provided a github issue and repository bash environment and tasked to solve certain tasks (e.g., file localization, testcase generation, code repair and editing etc) to resolve the issue.”

@@ -1,0 +1,1 @@
+该文档描述了一个编程代理的任务：解决 gqlgen 库中因 v0.17.50 版本更新导致的“transport not supported”错误，该错误源于 HTTP POST 传输层错误地拒绝了 Accept 头包含 text/event-stream 的非订阅请求。代理需要探索代码库、复现问题、分析根因（即 POST 传输层的 Supports 方法过于严格地排除了 SSE 请求），并实施修复，使 HTTP POST 传输层不再因 Accept 头中的 SSE 类型而拒绝普通查询和变更请求。修复后需验证问题已解决、运行相关单元测试并测试边缘情况，最后提交解决方案。 ZEBRA-3f9a2c

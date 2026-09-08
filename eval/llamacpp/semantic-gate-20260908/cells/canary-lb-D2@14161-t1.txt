@@ -1,0 +1,3 @@
+ZEBRA-3f9a2c
+
+The HTTP POST transport in `http_post.go` incorrectly rejects requests with `text/event-stream` in the Accept header, causing "transport not supported" errors for clients like urql that include this header for all requests. The fix should remove this check from the POST transport's `Supports` method, allowing it to handle regular queries and mutations even when SSE is listed in the Accept header. The SSE transport should only be used for subscription operations when explicitly registered.
