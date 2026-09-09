@@ -1,0 +1,59 @@
+arm=b2b-1 train_runs=38 dev_runs=8 train_sup_steps=1630
+EVAL 0: dev={'top1': 0.8578, 'recall': 0.9755, 'margin': 6.3851, 'loss': 4.818}
+  step 50 loss=2.5658 top1=0.9643 recall=0.9821 22s
+  step 100 loss=5.3667 top1=0.7895 recall=1.0 38s
+  step 150 loss=2.1156 top1=0.9608 recall=0.9804 55s
+  step 200 loss=8.0725 top1=0.4286 recall=0.9286 71s
+  step 250 loss=3.9011 top1=0.8537 recall=1.0 88s
+  step 300 loss=1.5057 top1=1.0 recall=1.0 104s
+  step 350 loss=3.2202 top1=0.8 recall=1.0 120s
+  step 400 loss=1.4452 top1=0.98 recall=0.98 137s
+  step 450 loss=3.8717 top1=0.8065 recall=0.9677 153s
+  step 500 loss=5.2418 top1=0.8261 recall=1.0 170s
+EVAL 500: dev={'top1': 0.8822, 'recall': 0.9899, 'margin': 6.1905, 'loss': 3.679}
+  step 550 loss=1.6359 top1=0.9796 recall=0.9796 191s
+  step 600 loss=1.2001 top1=0.98 recall=0.98 207s
+  step 650 loss=1.0521 top1=1.0 recall=1.0 224s
+  step 700 loss=1.5191 top1=0.9512 recall=1.0 240s
+  step 750 loss=5.6101 top1=0.6207 recall=0.8966 257s
+  step 800 loss=4.7838 top1=0.7742 recall=1.0 273s
+  step 850 loss=0.9608 top1=1.0 recall=1.0 290s
+  step 900 loss=3.1874 top1=0.8333 recall=1.0 306s
+  step 950 loss=1.5458 top1=0.9362 recall=0.9787 323s
+  step 1000 loss=3.4075 top1=0.8333 recall=1.0 339s
+EVAL 1000: dev={'top1': 0.88, 'recall': 0.9908, 'margin': 6.382, 'loss': 3.5306}
+  step 1050 loss=1.5375 top1=0.9804 recall=1.0 360s
+  step 1100 loss=1.6333 top1=0.9565 recall=1.0 376s
+  step 1150 loss=1.7772 top1=0.8974 recall=1.0 393s
+  step 1200 loss=1.164 top1=0.9821 recall=1.0 409s
+  step 1250 loss=2.9522 top1=0.8276 recall=1.0 426s
+  step 1300 loss=2.6317 top1=0.8571 recall=1.0 442s
+  step 1350 loss=3.3407 top1=0.9429 recall=1.0 458s
+  step 1400 loss=2.7959 top1=0.9091 recall=1.0 475s
+  step 1450 loss=1.7229 top1=0.95 recall=1.0 491s
+  step 1500 loss=1.7342 top1=0.9032 recall=1.0 508s
+EVAL 1500: dev={'top1': 0.8838, 'recall': 0.9885, 'margin': 6.7195, 'loss': 3.4245}
+  step 1550 loss=0.8971 top1=1.0 recall=1.0 529s
+  step 1600 loss=1.3172 top1=0.9412 recall=1.0 545s
+  step 1650 loss=1.9751 top1=0.9444 recall=1.0 562s
+  step 1700 loss=0.6836 top1=1.0 recall=1.0 578s
+  step 1750 loss=1.3579 top1=0.9355 recall=1.0 595s
+  step 1800 loss=0.3236 top1=1.0 recall=1.0 611s
+  step 1850 loss=0.8335 top1=1.0 recall=1.0 628s
+  step 1900 loss=0.6039 top1=1.0 recall=1.0 644s
+  step 1950 loss=0.3448 top1=0.9762 recall=1.0 660s
+  step 2000 loss=0.6769 top1=1.0 recall=1.0 677s
+EVAL 2000: dev={'top1': 0.8849, 'recall': 0.9885, 'margin': 7.0522, 'loss': 3.4255}
+{
+ "arm": "b2b-1",
+ "frozen_stack": "/data/sandbox/ab-vllm/b2b/frozen-int4-stack.pt",
+ "max_steps": 2000,
+ "g1": {
+  "no_nan": true,
+  "fc_moved": true,
+  "zero_assert": null
+ },
+ "g2": {
+  "SMOKE_PASS": false
+ }
+}

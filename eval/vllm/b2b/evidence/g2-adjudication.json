@@ -1,0 +1,20 @@
+{
+ "what": "smoke G2 manual adjudication (train_qat.py @0-eval bug: loop starts at it=1 so eval_at never hits step 0; the script verdict in history-smoke-b2b-1.json is therefore vacuously false and does NOT represent the data)",
+ "@0_source": "zero-arm EVAL 50 (/data/sandbox/ab-vllm/b2b/smoke-zero/history.json): masters asserted bitwise-unchanged through 50 steps = baseline init; same int4 stack, same dev_proxies 24-chunk set, same seed -> dev@0 = {top1 0.8578, recall 0.9755, margin 6.3851, loss 4.818}",
+ "data": {
+  "dev@0": {"top1": 0.8578, "recall": 0.9755, "margin": 6.3851, "loss": 4.818},
+  "dev@100": {"top1": 0.8596, "recall": 0.9755, "margin": 6.3805, "loss": 4.3675},
+  "dev@200": {"top1": 0.8654, "recall": 0.9755, "margin": 6.353, "loss": 4.175},
+  "dev@300": {"top1": 0.8681, "recall": 0.9861, "margin": 6.181, "loss": 4.7534}
+ },
+ "g2_at_200": {
+  "loss<0.9x": "4.175 < 4.336 PASS",
+  "proxy_move": "top1 +0.0076 >= +0.001 PASS (recall 0, margin -0.032)",
+  "no_regression": "recall 0>=-0.002, top1 +0.0076>=-0.001, margin -0.032>=-0.05 PASS",
+  "verdict": "PASS"
+ },
+ "g2_at_300": "loss 4.7534 > 4.336 FAIL (chunk variance; @200 already passed, re-check clause not needed)",
+ "smoke_verdict": "PASS",
+ "g1": {"no_nan": true, "fc_moved": true, "zero_bitwise_assert": true},
+ "note": "bug fixed in train_qat.py before the formal run (eval_dev(0) before the loop); formal history contains its own @0 which equals the zero-arm value exactly"
+}

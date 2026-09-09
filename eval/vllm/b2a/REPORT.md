@@ -68,3 +68,35 @@ cd eval/vllm/b2a && /data/vllm/venv/bin/python analyze.py    # 恢复表
 #   models/Qwen3.8-27B-DFlash2-b1 models/…-b1-fc16 drafter/hessians_noctx.pt --fc-bits 16  # S3
 # 探针:    沙箱 boot（b0.env 模板换 DRAFT）→ python probe.py <label>
 ```
+
+## 裁定修订（用户裁决 2026-09-09，冻结）
+
+**结论表述收紧**（替代上面第 3 点的单一表述）：本实验证明的是——把 fc 单独恢复到
+高精度（S3/S4）、把层 Hessian 重校准（S5），都**不足以**恢复 B1 的 acceptance 增益；
+因此「单一 fc 量化误差」与「原始层量化 Hessian 失配」**均被排除**。剩余候选是
+**训练后 fc 与量化层之间的函数协同/误差放大**，以及**量化后 acceptance 的语料敏感性**
+（S6 独立发现所证）。真正的工程矛盾：
+
+> 训练目标在优化 bf16 DFlash2 函数，而部署函数是量化后的 DFlash2 函数。
+
+**Precision ladder**（本表数据的核心读法——比"fc 要不要 bf16"更关键）：
+
+```text
+S1  fc bf16   × 5 层 bf16   = 3.4943   训练收益存在
+S3  fc bf16   × 5 层 int4   = 3.3428   层一旦 int4，收益基本消失
+S4  fc int8   × 5 层 int4   = 3.3744
+S2  fc int4   × 5 层 int4   = 3.2631
+```
+
+**R 降级为辅助指标**：R=(arm−S0)/(S1−S0) 是对 B1 已观测增益的归一化比例，不是独立
+可重复的效应量，且分母跨语料不稳定；未来报告看到 R=−0.39 不应读作"恢复了 −39%"。
+所有 acceptance 报告自此强制五字段：`absolute Δtok/step / relative % / median Δ /
+bootstrap CI / positive fraction`，R 仅作附录。
+
+**语料角色冻结**（三分布不得混用）：t3 = 契约 fixture；calib/DEV = B1/B2 优化口径；
+FINAL = 科学判据；production recal = 生产对照，**永不作训练质量基准**（t3 +10% 而
+FINAL −5% 的语料敏感性已在 S6 实证）。
+
+**路线裁定**：B2-B 锁定 **deployment-aware QAT**（训练期 fc 直接看见部署等效 int4
+层函数），smoke 前置门后正式训练；解冻 5 层维持禁令（无任何证据支持，且搜索空间已
+压缩到"训练函数与部署量化函数不一致"这一层）。见 `../b2b/CONTRACT-B2B.md`。

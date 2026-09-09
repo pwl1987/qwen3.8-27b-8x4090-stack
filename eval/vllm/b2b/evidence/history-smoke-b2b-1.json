@@ -1,0 +1,99 @@
+{
+ "arm": "b2b-1",
+ "frozen_stack": "/data/sandbox/ab-vllm/b2b/frozen-int4-stack.pt",
+ "max_steps": 300,
+ "g1": {
+  "no_nan": true,
+  "fc_moved": true,
+  "zero_assert": null
+ },
+ "g2": {
+  "SMOKE_PASS": false
+ },
+ "history": [
+  {
+   "step": 100,
+   "dev": {
+    "top1": 0.8596,
+    "recall": 0.9755,
+    "margin": 6.3805,
+    "loss": 4.3675
+   },
+   "dL2": {
+    "fc": {
+     "abs": 1.35234,
+     "rel": 0.000679
+    },
+    "hp": {
+     "abs": 0.1654,
+     "rel": 0.011061
+    },
+    "pred": {
+     "abs": 0.03789,
+     "rel": 5e-06
+    },
+    "succ": {
+     "abs": 0.12173,
+     "rel": 0.000233
+    }
+   },
+   "sec": 37.6
+  },
+  {
+   "step": 200,
+   "dev": {
+    "top1": 0.8654,
+    "recall": 0.9755,
+    "margin": 6.353,
+    "loss": 4.175
+   },
+   "dL2": {
+    "fc": {
+     "abs": 2.08238,
+     "rel": 0.001046
+    },
+    "hp": {
+     "abs": 0.26569,
+     "rel": 0.017768
+    },
+    "pred": {
+     "abs": 0.06513,
+     "rel": 9e-06
+    },
+    "succ": {
+     "abs": 0.2106,
+     "rel": 0.000404
+    }
+   },
+   "sec": 75.1
+  },
+  {
+   "step": 300,
+   "dev": {
+    "top1": 0.8681,
+    "recall": 0.9861,
+    "margin": 6.181,
+    "loss": 4.7534
+   },
+   "dL2": {
+    "fc": {
+     "abs": 2.90119,
+     "rel": 0.001457
+    },
+    "hp": {
+     "abs": 0.36062,
+     "rel": 0.024116
+    },
+    "pred": {
+     "abs": 0.09365,
+     "rel": 1.3e-05
+    },
+    "succ": {
+     "abs": 0.30197,
+     "rel": 0.000579
+    }
+   },
+   "sec": 112.5
+  }
+ ]
+}

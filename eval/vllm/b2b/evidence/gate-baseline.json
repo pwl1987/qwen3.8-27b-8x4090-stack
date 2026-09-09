@@ -1,0 +1,88 @@
+{
+ "tag": "baseline-masters",
+ "ckpt": "/data/sandbox/ab-vllm/b2b/qat-b2b-1/ckpt-0000.pt",
+ "bf16_stack": {
+  "baseline_compatibility": {
+   "fc_cos": {
+    "n": 2400,
+    "mean": 1.0,
+    "p50": 1.0,
+    "p10": 1.0,
+    "min": 1.0
+   },
+   "sh_cos_vs_engine": {
+    "n": 2100,
+    "mean": 0.9999,
+    "p50": 0.9999,
+    "p10": 0.9998,
+    "min": 0.9993
+   },
+   "top16_vs_engine": {
+    "n": 2100,
+    "mean": 15.7633,
+    "p50": 16.0,
+    "p10": 15.0,
+    "min": 14.0
+   }
+  },
+  "speculation_quality": {
+   "recall": 0.9823,
+   "top1": 0.8347,
+   "mean_rank": 1.404,
+   "mean_margin": 5.35,
+   "own_walk_k": 0.1194,
+   "engine_k": 3.9855
+  }
+ },
+ "int4_stack": {
+  "baseline_compatibility": {
+   "fc_cos": {
+    "n": 2400,
+    "mean": 1.0,
+    "p50": 1.0,
+    "p10": 1.0,
+    "min": 1.0
+   },
+   "sh_cos_vs_engine": {
+    "n": 2100,
+    "mean": 0.9856,
+    "p50": 0.9871,
+    "p10": 0.9785,
+    "min": 0.9205
+   },
+   "top16_vs_engine": {
+    "n": 2100,
+    "mean": 14.3533,
+    "p50": 14.0,
+    "p10": 13.0,
+    "min": 9.0
+   }
+  },
+  "speculation_quality": {
+   "recall": 0.979,
+   "top1": 0.829,
+   "mean_rank": 1.397,
+   "mean_margin": 5.361,
+   "own_walk_k": 0.1306,
+   "engine_k": 3.9855
+  }
+ },
+ "delta_int4_minus_bf16": {
+  "recall": -0.0033,
+  "top1": -0.0057,
+  "mean_rank": -0.007,
+  "mean_margin": 0.011,
+  "own_walk_k": 0.0112,
+  "engine_k": 0.0
+ },
+ "delta_sh_cos_mean": -0.0143,
+ "g0": {
+  "sh_cos_visible": true,
+  "own_walk_k_negative": false,
+  "rel_walk_drop_in_band": false,
+  "rel_walk_drop": 0.0938,
+  "engine_ladder_rel": "S1->S3 = -0.152/3.4943 = -4.4%",
+  "recall_diagnostic": -0.0033,
+  "PASS": false
+ }
+}

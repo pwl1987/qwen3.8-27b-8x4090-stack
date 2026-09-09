@@ -1,0 +1,86 @@
+{
+ "tag": "g0-b1-1-2000",
+ "ckpt": "/data/sandbox/ab-vllm/b1/ckpts/b1-1/ckpt-2000.pt",
+ "bf16_stack": {
+  "baseline_compatibility": {
+   "fc_cos": {
+    "n": 2400,
+    "mean": 0.9994,
+    "p50": 0.9994,
+    "p10": 0.9992,
+    "min": 0.9977
+   },
+   "sh_cos_vs_engine": {
+    "n": 2100,
+    "mean": 0.9777,
+    "p50": 0.9896,
+    "p10": 0.9743,
+    "min": 0.5443
+   },
+   "top16_vs_engine": {
+    "n": 2100,
+    "mean": 13.9114,
+    "p50": 14.0,
+    "p10": 12.0,
+    "min": 1.0
+   }
+  },
+  "speculation_quality": {
+   "recall": 0.9895,
+   "top1": 0.8484,
+   "mean_rank": 1.373,
+   "mean_margin": 5.873,
+   "own_walk_k": 0.791,
+   "engine_k": 3.9855
+  }
+ },
+ "int4_stack": {
+  "baseline_compatibility": {
+   "fc_cos": {
+    "n": 2400,
+    "mean": 0.9994,
+    "p50": 0.9994,
+    "p10": 0.9992,
+    "min": 0.9977
+   },
+   "sh_cos_vs_engine": {
+    "n": 2100,
+    "mean": 0.9635,
+    "p50": 0.9753,
+    "p10": 0.9552,
+    "min": 0.5343
+   },
+   "top16_vs_engine": {
+    "n": 2100,
+    "mean": 13.3338,
+    "p50": 14.0,
+    "p10": 11.0,
+    "min": 1.0
+   }
+  },
+  "speculation_quality": {
+   "recall": 0.9895,
+   "top1": 0.8452,
+   "mean_rank": 1.412,
+   "mean_margin": 5.841,
+   "own_walk_k": 0.7612,
+   "engine_k": 3.9855
+  }
+ },
+ "delta_int4_minus_bf16": {
+  "recall": 0.0,
+  "top1": -0.0032,
+  "mean_rank": 0.039,
+  "mean_margin": -0.032,
+  "own_walk_k": -0.0298,
+  "engine_k": 0.0
+ },
+ "g0": {
+  "sh_cos_visible": true,
+  "own_walk_k_negative": true,
+  "rel_walk_drop_in_band": true,
+  "rel_walk_drop": -0.0377,
+  "PASS": true
+ },
+ "delta_sh_cos_mean": -0.0142
+}

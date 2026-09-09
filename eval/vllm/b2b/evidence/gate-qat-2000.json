@@ -1,0 +1,88 @@
+{
+ "tag": "qat-b2b-1-2000",
+ "ckpt": "/data/sandbox/ab-vllm/b2b/qat-b2b-1/ckpt-2000.pt",
+ "bf16_stack": {
+  "baseline_compatibility": {
+   "fc_cos": {
+    "n": 2400,
+    "mean": 0.9994,
+    "p50": 0.9994,
+    "p10": 0.9992,
+    "min": 0.9978
+   },
+   "sh_cos_vs_engine": {
+    "n": 2100,
+    "mean": 0.9786,
+    "p50": 0.99,
+    "p10": 0.9745,
+    "min": 0.5563
+   },
+   "top16_vs_engine": {
+    "n": 2100,
+    "mean": 13.9505,
+    "p50": 14.0,
+    "p10": 12.0,
+    "min": 1.0
+   }
+  },
+  "speculation_quality": {
+   "recall": 0.9895,
+   "top1": 0.8524,
+   "mean_rank": 1.366,
+   "mean_margin": 5.865,
+   "own_walk_k": 0.7836,
+   "engine_k": 3.9855
+  }
+ },
+ "int4_stack": {
+  "baseline_compatibility": {
+   "fc_cos": {
+    "n": 2400,
+    "mean": 0.9994,
+    "p50": 0.9994,
+    "p10": 0.9992,
+    "min": 0.9978
+   },
+   "sh_cos_vs_engine": {
+    "n": 2100,
+    "mean": 0.9639,
+    "p50": 0.9757,
+    "p10": 0.9551,
+    "min": 0.5394
+   },
+   "top16_vs_engine": {
+    "n": 2100,
+    "mean": 13.381,
+    "p50": 14.0,
+    "p10": 11.0,
+    "min": 1.0
+   }
+  },
+  "speculation_quality": {
+   "recall": 0.9887,
+   "top1": 0.8444,
+   "mean_rank": 1.394,
+   "mean_margin": 5.863,
+   "own_walk_k": 0.709,
+   "engine_k": 3.9855
+  }
+ },
+ "delta_int4_minus_bf16": {
+  "recall": -0.0008,
+  "top1": -0.008,
+  "mean_rank": 0.028,
+  "mean_margin": -0.002,
+  "own_walk_k": -0.0746,
+  "engine_k": 0.0
+ },
+ "delta_sh_cos_mean": -0.0147,
+ "g0": {
+  "sh_cos_visible": true,
+  "own_walk_k_negative": true,
+  "rel_walk_drop_in_band": true,
+  "rel_walk_drop": -0.0952,
+  "engine_ladder_rel": "S1->S3 = -0.152/3.4943 = -4.4%",
+  "recall_diagnostic": -0.0008,
+  "PASS": true
+ }
+}

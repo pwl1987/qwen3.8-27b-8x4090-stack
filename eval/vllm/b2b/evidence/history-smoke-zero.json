@@ -1,0 +1,41 @@
+{
+ "arm": "zero",
+ "frozen_stack": "/data/sandbox/ab-vllm/b2b/frozen-int4-stack.pt",
+ "max_steps": 50,
+ "g1": {
+  "no_nan": true,
+  "fc_moved": false,
+  "zero_assert": true
+ },
+ "g2": null,
+ "history": [
+  {
+   "step": 50,
+   "dev": {
+    "top1": 0.8578,
+    "recall": 0.9755,
+    "margin": 6.3851,
+    "loss": 4.818
+   },
+   "dL2": {
+    "fc": {
+     "abs": 0.0,
+     "rel": 0.0
+    },
+    "hp": {
+     "abs": 0.0,
+     "rel": 0.0
+    },
+    "pred": {
+     "abs": 0.0,
+     "rel": 0.0
+    },
+    "succ": {
+     "abs": 0.0,
+     "rel": 0.0
+    }
+   },
+   "sec": 11.7
+  }
+ ]
+}

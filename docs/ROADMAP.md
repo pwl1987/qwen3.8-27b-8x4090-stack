@@ -83,6 +83,22 @@ fc 保 bf16（R=−0.39）/ fc int8（R=−0.05）/ trained-flow Hessian 重校�
 **B2-B 候选待裁决**：b1 = QAT 式重训（复刻栈换载部署等效 int4 层权重重训 fc+selector，
 工具全就绪 ~1.5h）｜ b2 = 直接部署全 bf16 drafter（3.85GB，245K 需显存重预算）。
 Hessian 线关闭；不解冻 5 层维持。
+**已裁决（2026-09-09）→ B2-B = deployment-aware QAT**（`eval/vllm/b2b/`，CONTRACT-B2B.md
+冻结）：B2-A 结论按裁定修订收紧为「fc 精度与 Hessian 均排除，剩余 = 训练 fc×量化层函数
+协同/放大 + 语料敏感性；训练函数≠部署函数」，R 降辅助指标、五字段报告强制、语料角色
+冻结（DEV 优化/FINAL-60 科学/t3 fixture/production recal 仅参照）；QAT = 冻结栈换
+`…-b1-fc16` 35 矩阵反量化重训 fc+selector（与 B1-B b1-1 唯一变量=冻结栈），smoke 前置门
+G0/G1/G2 → 正式 2000 步 → 导出（层 packed 逐位不变）→ 16 FINAL 筛查 → ≥60 FINAL
+双统计门 → ≥3.5 = 工程成功；四层任一失败即停该层如实入 REPORT。
+**B2-B 已执行完毕（2026-09-09，`eval/vllm/b2b/REPORT.md`）——tier-1 FAIL，QAT 线证伪**：
+G0 fake-int4 忠实性 PASS（修订口径：walk 相对降 −3.77% ≈ 引擎 −4.4%；recall 条款为
+规格错误，训练前治理修订）；smoke G1/G2 PASS；正式 2000 步训练代理正常（与 B1-b1-1
+轨迹几乎重合）但**部署栈重放被朴素迁移全面击败**——int4 训练 masters walk 0.709 <
+bf16 训练迁移 0.7612，逐 ckpt 被支配，栈间 gap 恶化（−9.5% vs −3.8%）。机理：固定
+int4 噪声实现上的补偿学习过拟合 TRAIN 上下文；干净函数训练对零均值扰动更稳健。
+**三条恢复路（fc 精度/Hessian/QAT）全部证伪 → 训练增益需要 bf16 层函数本身。**
+剩余选项：部署全 bf16 drafter（S1=3.4943，245K 需 +2.6GB 重预算）vs 维持现产 recal
+（语料敏感 3.2951）。层权重 QAT（=解冻域）未试，需用户明示解禁才可开题。
 
 **在线蒸馏设计**（免落盘 5×5120/token 特征）：
 1. 引擎内进程起目标模型（capture_dflash2.py 同款挂钩），批量生成采
