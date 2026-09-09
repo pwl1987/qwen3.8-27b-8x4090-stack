@@ -1,0 +1,22 @@
+[
+ {
+  "target_tokens": 260,
+  "tag": "S3_60",
+  "drafts": 66.0,
+  "accepted": 194.0,
+  "tok_per_step": 3.9393939393939394,
+  "sha12": "c3188a12d71a",
+  "chars": 1167,
+  "sec": 1.9
+ },
+ {
+  "target_tokens": 760,
+  "tag": "S3_60",
+  "drafts": 98.0,
+  "accepted": 211.0,
+  "tok_per_step": 3.1530612244897958,
+  "sha12": "6e7ef513606a",
+  "chars": 1466,
+  "sec": 2.9
+ }
+]

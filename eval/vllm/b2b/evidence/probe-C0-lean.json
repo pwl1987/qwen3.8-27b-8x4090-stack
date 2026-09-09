@@ -1,0 +1,173 @@
+{
+ "label": "C0-lean",
+ "contract": {
+  "self_deterministic": true,
+  "sha12": "01e13d0cca4d",
+  "chars": 1077,
+  "semantic": {
+   "ok": true,
+   "garbage": false,
+   "repeat_loop": false
+  }
+ },
+ "rows": [
+  {
+   "target_tokens": 512,
+   "tok_per_step": 2.879518072289157,
+   "sha12": "01e13d0cca4d",
+   "drafts": 0,
+   "accepted": 0,
+   "chars": 1077
+  },
+  {
+   "target_tokens": 300,
+   "tag": "C0-lean",
+   "drafts": 76.0,
+   "accepted": 197.0,
+   "tok_per_step": 3.5921052631578947,
+   "sha12": "6c481ca8378d",
+   "chars": 1219,
+   "sec": 2.3
+  },
+  {
+   "target_tokens": 313,
+   "tag": "C0-lean",
+   "drafts": 76.0,
+   "accepted": 197.0,
+   "tok_per_step": 3.5921052631578947,
+   "sha12": "6c481ca8378d",
+   "chars": 1219,
+   "sec": 2.3
+  },
+  {
+   "target_tokens": 339,
+   "tag": "C0-lean",
+   "drafts": 65.0,
+   "accepted": 156.0,
+   "tok_per_step": 3.4,
+   "sha12": "4028466e86cd",
+   "chars": 975,
+   "sec": 2.0
+  },
+  {
+   "target_tokens": 352,
+   "tag": "C0-lean",
+   "drafts": 65.0,
+   "accepted": 156.0,
+   "tok_per_step": 3.4,
+   "sha12": "4028466e86cd",
+   "chars": 975,
+   "sec": 2.0
+  },
+  {
+   "target_tokens": 391,
+   "tag": "C0-lean",
+   "drafts": 72.0,
+   "accepted": 160.0,
+   "tok_per_step": 3.2222222222222223,
+   "sha12": "712e6b438ec8",
+   "chars": 991,
+   "sec": 2.2
+  },
+  {
+   "target_tokens": 404,
+   "tag": "C0-lean",
+   "drafts": 72.0,
+   "accepted": 160.0,
+   "tok_per_step": 3.2222222222222223,
+   "sha12": "712e6b438ec8",
+   "chars": 991,
+   "sec": 2.2
+  },
+  {
+   "target_tokens": 443,
+   "tag": "C0-lean",
+   "drafts": 97.0,
+   "accepted": 243.0,
+   "tok_per_step": 3.5051546391752577,
+   "sha12": "f3f9bf73244d",
+   "chars": 1404,
+   "sec": 2.9
+  },
+  {
+   "target_tokens": 456,
+   "tag": "C0-lean",
+   "drafts": 97.0,
+   "accepted": 243.0,
+   "tok_per_step": 3.5051546391752577,
+   "sha12": "f3f9bf73244d",
+   "chars": 1404,
+   "sec": 2.9
+  },
+  {
+   "target_tokens": 495,
+   "tag": "C0-lean",
+   "drafts": 90.0,
+   "accepted": 187.0,
+   "tok_per_step": 3.077777777777778,
+   "sha12": "6360b60c2c80",
+   "chars": 1210,
+   "sec": 2.8
+  },
+  {
+   "target_tokens": 508,
+   "tag": "C0-lean",
+   "drafts": 83.0,
+   "accepted": 156.0,
+   "tok_per_step": 2.879518072289157,
+   "sha12": "01e13d0cca4d",
+   "chars": 1077,
+   "sec": 2.6
+  },
+  {
+   "target_tokens": 547,
+   "tag": "C0-lean",
+   "drafts": 83.0,
+   "accepted": 156.0,
+   "tok_per_step": 2.879518072289157,
+   "sha12": "01e13d0cca4d",
+   "chars": 1077,
+   "sec": 2.6
+  },
+  {
+   "target_tokens": 560,
+   "tag": "C0-lean",
+   "drafts": 84.0,
+   "accepted": 221.0,
+   "tok_per_step": 3.630952380952381,
+   "sha12": "055ad45c0880",
+   "chars": 1315,
+   "sec": 2.6
+  },
+  {
+   "target_tokens": 599,
+   "tag": "C0-lean",
+   "drafts": 82.0,
+   "accepted": 154.0,
+   "tok_per_step": 2.8780487804878048,
+   "sha12": "284332126535",
+   "chars": 1102,
+   "sec": 2.6
+  },
+  {
+   "target_tokens": 612,
+   "tag": "C0-lean",
+   "drafts": 82.0,
+   "accepted": 154.0,
+   "tok_per_step": 2.8780487804878048,
+   "sha12": "284332126535",
+   "chars": 1102,
+   "sec": 2.6
+  },
+  {
+   "target_tokens": 651,
+   "tag": "C0-lean",
+   "drafts": 67.0,
+   "accepted": 169.0,
+   "tok_per_step": 3.5223880597014925,
+   "sha12": "9c12a9ddc98b",
+   "chars": 1040,
+   "sec": 2.2
+  }
+ ]
+}

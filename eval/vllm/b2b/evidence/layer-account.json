@@ -1,0 +1,66 @@
+{
+ "masters": "/data/sandbox/ab-vllm/b1/ckpts/b1-1/ckpt-2000.pt",
+ "references": {
+  "walk_bf16_stack": 0.791,
+  "walk_full_int4": 0.7612,
+  "total_walk_damage": -0.0298
+ },
+ "ledger1_weight_rel_err_per_layer": {
+  "layer0": 0.1674,
+  "layer1": 0.1516,
+  "layer2": 0.1468,
+  "layer3": 0.1452,
+  "layer4": 0.1452
+ },
+ "ledger2_hidden_cosine_per_layer": {
+  "layer0": {
+   "n": 300,
+   "mean": 0.99979,
+   "p10": 0.99967
+  },
+  "layer1": {
+   "n": 300,
+   "mean": 0.99955,
+   "p10": 0.99933
+  },
+  "layer2": {
+   "n": 300,
+   "mean": 0.99618,
+   "p10": 0.99436
+  },
+  "layer3": {
+   "n": 300,
+   "mean": 0.9873,
+   "p10": 0.98202
+  },
+  "layer4": {
+   "n": 300,
+   "mean": 0.99872,
+   "p10": 0.99783
+  }
+ },
+ "ledger3_leave_one_layer_bf16": {
+  "layer0": {
+   "walk_loo_bf16": 0.7687,
+   "marginal_vs_full_int4": 0.0075
+  },
+  "layer1": {
+   "walk_loo_bf16": 0.7463,
+   "marginal_vs_full_int4": -0.0149
+  },
+  "layer2": {
+   "walk_loo_bf16": 0.7761,
+   "marginal_vs_full_int4": 0.0149
+  },
+  "layer3": {
+   "walk_loo_bf16": 0.7649,
+   "marginal_vs_full_int4": 0.0037
+  },
+  "layer4": {
+   "walk_loo_bf16": 0.806,
+   "marginal_vs_full_int4": 0.0448
+  }
+ },
+ "sum_of_marginals": 0.056,
+ "note": "report-only (CONTRACT-B2B.md 8.5); marginals measured with b1-1@2000 masters where the walk signal has range"
+}

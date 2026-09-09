@@ -81,3 +81,100 @@ python train_qat.py --arm b2b-1 --max-steps 2000 --eval-at 500,1000,1500,2000 --
 # 逐 ckpt 双栈矩阵
 for ck in 0000 0500 1000 1500 2000; do python gate_qat.py --ckpt .../qat-b2b-1/ckpt-$ck.pt ...
 ```
+
+---
+
+## 修订 2 注记（2026-09-08/09，用户裁决；引擎阶段重开）
+
+本报告上述结论截至 tier-1（DEV 代理层），按当时冻结的比较对象（朴素迁移 0.7612）
+判 FAIL 并停止——**引擎阶段（导出/boot/FINAL-60）从未运行**。用户裁决 comparator
+架构修正（见 CONTRACT-B2B.md §8）后梯子重开：
+
+1. **tier-① 重判 PASS**（同一批测量、比较对象按新 PRIMARY 哲学换为同族
+   W4-baseline：QAT@2000 int4 栈 walk 0.7090 vs W4-baseline 0.1306）；上文
+   "QAT 被朴素迁移全面击败"的记录原文保留——它回答的是另一个（部署选择）问题，
+   并继续作为 context 参照（SECONDARY Q vs S3 相位）。
+2. 引擎阶段以 §8 修订后的比较架构执行：五相位 FINAL-60（W/Q/C0/S1/S3）+
+   四格矩阵终判。结果见下文「引擎五相位终判」节。
+
+---
+
+# 引擎五相位终判（修订2 执行，2026-09-09）
+
+## 结论速览
+
+| 判据 | 结果 |
+|---|---|
+| PRIMARY（lean 统一，Q−W 配对 FINAL-60） | **PASS 两轮**：+0.2441（CI [0.125,0.358]，p≈1e-6，48/12/0）→ 复跑 +0.3257（CI [0.158,0.506]，p=1e-5，46/14/0） |
+| PRIMARY（**认证生产形制**，确定性） | **FAIL**：−0.0109（CI [−0.085,0.056]，p=0.055）——增益不存在于部署配置 |
+| 四格矩阵（按部署形制定判） | **≈0 → QAT 失败**（lean 下为正，但配置脆弱，不能宣称科学成功） |
+| 工程 ≥3.5 | 未达（Q 最佳均值 3.4555@lean / 3.2560@certified） |
+| t3 / target_correctness | PASS（五相位全自确定、语义 OK、成对 BENIGN-DIFF 良性类） |
+| B1-C 复测（S1−C0，描述性） | +0.0346（CI 含 0，p=0.023）——方向为正不显著；**B1-C 冻结判定不回写** |
+
+**一句话**：QAT 在引擎中确实产生了同族增益（W4-baseline → QAT-W4，lean 下 +0.24/+0.33
+两轮复现），但该增益**只在 32K/KV2G lean 配置下出现**；在认证生产形制（245K/KV4.86G，
+boot 确定性、两次逐位一致）下增益完全消失（−0.011）。B2-B 判定：**QAT 线在生产配置
+下无可用增益**——deployment-aware QAT 假设被引擎证据否定（DEV 代理 tier-① 的悲观
+预言在生产形制下成立）。
+
+## 五相位 FINAL-60（lean 统一形制：KV 2G / MAX_LEN 32K / LOOKUP=0）
+
+| 相位 | drafter | FINAL-60 均值 | 16 条筛查 |
+|---|---|---|---|
+| W（W4-BASELINE） | pristine masters × int4 层（`…-b2b-w4base`，sha 1eb2240c） | 3.2114 / 复跑 3.0505 | 3.2410 |
+| Q（QAT-W4） | QAT@2000 masters × 同 int4 层（`…-b2b`，masters 6063fdf2） | **3.4555** / 复跑 3.3762 | 3.4053 |
+| C0（S0-bf16） | 原版全 bf16 | 3.2627 | 3.2540 |
+| S1（B1 trained-bf16） | b1-1@1500 导出全 bf16 | 3.2973 | 3.3385 |
+| S3（朴素迁移） | b1-1 masters × 同 int4 层 | 3.2684 | 3.3517 |
+
+lean 内部排序：**Q ≫ S1 > S3 ≈ C0 > W**；Q 对 C0 +0.1928（p=3e-5）、对 S3 +0.1871
+（p=0.004）——lean 形制下 QAT 同时击败 bf16 基线与朴素迁移。
+
+## 决定性发现：acceptance 的配置脆弱性（同权重跨 env/boot）
+
+| 对比（同权重、同 60 prompts） | Δ tok/step | 备注 |
+|---|---|---|
+| W：certified → lean | −0.0554（CI 含 0，24/60 平局） | 稳定 |
+| Q：certified → lean | **+0.1995**（CI [0.074,0.311]，p=0.0016，0/60 平局） | 全面分歧 |
+| W：lean boot#1 → #2 | −0.161 | lean boot 间混沌 |
+| Q：lean boot#1 → #2 | −0.079 | lean boot 间混沌 |
+| Q：certified boot#1 vs #2 | **60/60 逐位一致** | 认证形制确定性 |
+
+- **认证形制是确定性的**（两次 boot 逐位复现 3.2560）；lean 形制（KV 2G/32K）存在
+  boot 间布局混沌（良性改写类，B1.1 P0 语义），相位均值漂移 ±0.1–0.2。
+- 在确定性生产形制下：W 3.2668 > Q 3.2560（Q−W = −0.0109，FAIL）。
+- **方法论警告（波及既往）**：drafter A/B 的相位均值在 ±0.1–0.2 量级上配置/布局
+  脆弱——任何 ±0.1 级 acceptance 结论（含 B1-C 的 +0.088@31 条回看）都需要多
+  boot/多配置稳健性佐证；单一 boot 的均值不足为凭。
+
+## 算子级误差账（§8.5，b1-1@2000 masters 口径，参考 walk 0.791/0.7612 复现 G0）
+
+- 权重 rel err 各层均匀 ~15%（GPTQ 构造使然）。
+- 每层 hidden cosine：L0 0.9998 / L1 0.9996 / L2 0.9962 / **L3 0.9873（最深畸变）** / L4 0.9987。
+- leave-one-layer-bf16 walk 边际：**L4 +0.0448（主导）** > L2 +0.0149 > L0 +0.0075 >
+  L3 +0.0037 > L1 −0.0149（噪声/代偿）；边际和 0.056 > 总损伤 0.0298 → 非可加（恢复
+  任一层恢复的是重叠损伤）。
+- 判读：损伤不在权重噪声最大层，而在**输出侧 L4**（离 selector 最近）；hidden 畸变
+  最深的 L3 大部分被下游代偿。若未来重启量化族，layer-selective（先 L4）是唯一有
+  依据的切法——但本轮结论下量化族已全线关闭。
+
+## 现场与证据
+
+- 8 次 boot（5 相位 + W/Q certified 首跑 + Q60b/W60b/Q60c 复跑），全部 zx-p0 down 后
+  `.env` 字节复原校验通过；GPU2 终态 2MiB；生产/GPU6 零接触。
+- 证据：`evidence/accept60/`（每相位 60 行 + warmup + t3 contract）、
+  `evidence/stats-{lean-five-phase,replicate,certifiedenv}.json`、
+  `evidence/layer-account.json`、`evidence/probe-*.json`。
+- 构件：`models/Qwen3.8-27B-DFlash2-b2b-w4base`（四级 SHA provenance）与
+  `models/Qwen3.8-27B-DFlash2-b2b`；35 层 packed 与 S3 逐位一致（断言过）。
+
+## 终局裁定
+
+1. **B2-B 关闭，QAT 线证伪（生产形制）**：四条恢复路（fc 精度 / Hessian 重校 / QAT /
+   —— 加上本轮的配置依赖证据）全部走完，训练增益不可在认证部署函数上捕获。
+2. 剩余选项不变，待用户裁决：① 部署全 bf16 drafter（S1；245K 需 KV 重预算 +2.6GB，
+   本轮 b0 形制实测 S1 lean 3.2973/C0 3.2627）；② 维持现产 recal（零动作）；
+   ③ 解冻层权重 QAT（禁令域，需明示解禁）。
+3. 新增待裁决：**acceptance 配置脆弱性**是否要求对所有未来 drafter A/B 引入
+   「认证形制 + 多 boot」最低标准（本轮实证：lean 单 boot 均值不可采信）。

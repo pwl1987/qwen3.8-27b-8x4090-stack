@@ -138,3 +138,13 @@ int8 头模型差 0.2GB 过不了 FLA 碎片缘——方向 A 的显存治理或
 - `multi_residue_test.py` 升级为常规门禁项（任何动投机解码/前缀缓存的改动必跑）
 - 单变量 A/B 纪律：全新 recreate、钉死 GPU_UTIL、同 harness 同功耗
 - 历史教训制度化：/metrics 计数器 `vllm:` 前缀、tok/step 口径单一来源（ulmus 夹具）
+
+**B2-B 修订2 + 引擎阶段重开（2026-09-08/09 用户裁决，CONTRACT-B2B.md §8）**：验收
+比较架构修正——PRIMARY = QAT-W4 vs 同族 W4-BASELINE（新构件 `…-b2b-w4base`：拷 S3
+仅回写 4 个 KEYMAP 为 pristine baseline 值）FINAL-60 逐条配对；SECONDARY = vs S0/
+vs S3（朴素迁移）/S1−S0（B1-C 的 n=60 复测，冻结判定不回写）；AUXILIARY recovery=
+(Q−W)/(S1−S0) 同语料分母永不设门；四格矩阵终判；≥3.5=工程门专属；16 条筛查降级为
+健康+t3 门。tier-① 按新 PRIMARY 重判 PASS（0.7090 vs 0.1306），原 FAIL 记录保留。
+五相位（W/Q/C0/S1/S3）GPU2 沙箱执行，结果见 `eval/vllm/b2b/REPORT.md` 引擎终判节。
+另：B1 v3 三项锁死（loss_contract m=1.0 等 / N 簿记+N_valid<30 门 / W4 shadow 四级
+SHA 链）经审计确认已全部在执行前落实，B1 契约不回写。

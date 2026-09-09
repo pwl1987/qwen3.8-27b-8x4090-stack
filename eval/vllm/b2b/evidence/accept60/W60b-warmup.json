@@ -1,0 +1,22 @@
+[
+ {
+  "target_tokens": 260,
+  "tag": "W60b",
+  "drafts": 67.0,
+  "accepted": 192.0,
+  "tok_per_step": 3.8656716417910446,
+  "sha12": "c3188a12d71a",
+  "chars": 1167,
+  "sec": 1.9
+ },
+ {
+  "target_tokens": 760,
+  "tag": "W60b",
+  "drafts": 62.0,
+  "accepted": 152.0,
+  "tok_per_step": 3.4516129032258065,
+  "sha12": "ff26a9c3b6f0",
+  "chars": 912,
+  "sec": 2.0
+ }
+]

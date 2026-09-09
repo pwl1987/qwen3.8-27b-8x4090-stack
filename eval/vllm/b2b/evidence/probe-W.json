@@ -1,0 +1,173 @@
+{
+ "label": "W",
+ "contract": {
+  "self_deterministic": true,
+  "sha12": "66ab9317f753",
+  "chars": 1177,
+  "semantic": {
+   "ok": true,
+   "garbage": false,
+   "repeat_loop": false
+  }
+ },
+ "rows": [
+  {
+   "target_tokens": 512,
+   "tok_per_step": 3.0,
+   "sha12": "66ab9317f753",
+   "drafts": 0,
+   "accepted": 0,
+   "chars": 1177
+  },
+  {
+   "target_tokens": 300,
+   "tag": "W",
+   "drafts": 70.0,
+   "accepted": 178.0,
+   "tok_per_step": 3.5428571428571427,
+   "sha12": "ad1a92a9da18",
+   "chars": 1109,
+   "sec": 2.0
+  },
+  {
+   "target_tokens": 313,
+   "tag": "W",
+   "drafts": 70.0,
+   "accepted": 178.0,
+   "tok_per_step": 3.5428571428571427,
+   "sha12": "ad1a92a9da18",
+   "chars": 1109,
+   "sec": 2.0
+  },
+  {
+   "target_tokens": 339,
+   "tag": "W",
+   "drafts": 98.0,
+   "accepted": 215.0,
+   "tok_per_step": 3.193877551020408,
+   "sha12": "2acc25b2ce89",
+   "chars": 1411,
+   "sec": 2.7
+  },
+  {
+   "target_tokens": 352,
+   "tag": "W",
+   "drafts": 98.0,
+   "accepted": 215.0,
+   "tok_per_step": 3.193877551020408,
+   "sha12": "2acc25b2ce89",
+   "chars": 1411,
+   "sec": 2.7
+  },
+  {
+   "target_tokens": 391,
+   "tag": "W",
+   "drafts": 79.0,
+   "accepted": 153.0,
+   "tok_per_step": 2.9367088607594938,
+   "sha12": "32713d58412f",
+   "chars": 1037,
+   "sec": 2.2
+  },
+  {
+   "target_tokens": 404,
+   "tag": "W",
+   "drafts": 79.0,
+   "accepted": 153.0,
+   "tok_per_step": 2.9367088607594938,
+   "sha12": "32713d58412f",
+   "chars": 1037,
+   "sec": 2.2
+  },
+  {
+   "target_tokens": 443,
+   "tag": "W",
+   "drafts": 56.0,
+   "accepted": 131.0,
+   "tok_per_step": 3.3392857142857144,
+   "sha12": "7c7cbaef4a60",
+   "chars": 906,
+   "sec": 1.7
+  },
+  {
+   "target_tokens": 456,
+   "tag": "W",
+   "drafts": 56.0,
+   "accepted": 131.0,
+   "tok_per_step": 3.3392857142857144,
+   "sha12": "7c7cbaef4a60",
+   "chars": 906,
+   "sec": 1.7
+  },
+  {
+   "target_tokens": 495,
+   "tag": "W",
+   "drafts": 76.0,
+   "accepted": 161.0,
+   "tok_per_step": 3.1184210526315788,
+   "sha12": "01c6034112df",
+   "chars": 1006,
+   "sec": 2.2
+  },
+  {
+   "target_tokens": 508,
+   "tag": "W",
+   "drafts": 84.0,
+   "accepted": 168.0,
+   "tok_per_step": 3.0,
+   "sha12": "66ab9317f753",
+   "chars": 1177,
+   "sec": 2.4
+  },
+  {
+   "target_tokens": 547,
+   "tag": "W",
+   "drafts": 84.0,
+   "accepted": 168.0,
+   "tok_per_step": 3.0,
+   "sha12": "66ab9317f753",
+   "chars": 1177,
+   "sec": 2.4
+  },
+  {
+   "target_tokens": 560,
+   "tag": "W",
+   "drafts": 70.0,
+   "accepted": 175.0,
+   "tok_per_step": 3.5,
+   "sha12": "a58eb4bf8c31",
+   "chars": 1046,
+   "sec": 2.1
+  },
+  {
+   "target_tokens": 599,
+   "tag": "W",
+   "drafts": 63.0,
+   "accepted": 165.0,
+   "tok_per_step": 3.619047619047619,
+   "sha12": "df66b7d7a6f0",
+   "chars": 991,
+   "sec": 2.0
+  },
+  {
+   "target_tokens": 612,
+   "tag": "W",
+   "drafts": 63.0,
+   "accepted": 165.0,
+   "tok_per_step": 3.619047619047619,
+   "sha12": "df66b7d7a6f0",
+   "chars": 991,
+   "sec": 2.0
+  },
+  {
+   "target_tokens": 651,
+   "tag": "W",
+   "drafts": 70.0,
+   "accepted": 171.0,
+   "tok_per_step": 3.442857142857143,
+   "sha12": "31f3cca34cb5",
+   "chars": 1070,
+   "sec": 2.1
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+{
+ "self_deterministic": true,
+ "sha12": "6ca65f3c5de0",
+ "chars": 1188,
+ "semantic": {
+  "ok": true,
+  "garbage": false,
+  "repeat_loop": false
+ },
+ "t3_tok_per_step": 3.0229885057471266,
+ "text": "The RTX 3090's memory bandwidth is limited to 936 GB/s, which is the maximum value that the GPU's memory bus can handle. This bandwidth is determined by the number of memory buses and the data transfer rate of each bus. In the case of the RTX 3090, it has 82 streaming multiprocessors, each with a memory bus that can transfer data at a specific rate. The sum of the rates of all these buses gives the total memory bandwidth.\n\nWhen decoding a single stream, the GPU needs to read the input data and process it. The input data is stored in the GPU's memory, and the decoded output is written back to the CPU or other devices. The memory bandwidth limits the amount of data that can be read and written in a single cycle. If the input data is larger than the available memory bandwidth, the GPU cannot process the data efficiently, leading to a bottleneck in the decoding process.\n\nTherefore, the memory bandwidth of the RTX 3090, rather than its compute capability, is the limiting factor for single-stream decoding. This is because the GPU needs to read the input data, process it, and write the output back to the CPU or other devices, all within the constraints of the memory bandwidth."
+}

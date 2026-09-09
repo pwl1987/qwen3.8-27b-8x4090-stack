@@ -1,0 +1,20 @@
+{
+ "N_total": 60,
+ "N_valid": 60,
+ "N_positive": 46,
+ "N_negative": 14,
+ "N_tie": 0,
+ "five_field": {
+  "abs_mean_delta_tok_per_step": 0.3257,
+  "rel_percent": 10.68,
+  "median_delta": 0.0789,
+  "bootstrap95_CI": [
+   0.1583,
+   0.5057
+  ],
+  "positive_fraction": 0.7667
+ },
+ "wilcoxon_p_normalapprox": 1e-05,
+ "z": 4.461,
+ "verdict": "PASS"
+}

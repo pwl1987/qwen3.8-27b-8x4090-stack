@@ -1,0 +1,132 @@
+{
+ "comparator": "CONTRACT-B2B.md 修订2 §8.1 (PRIMARY Q vs W; SECONDARY Q-C0/Q-S3/S1-C0; AUX recovery same-corpus)",
+ "phase_means_FINAL60": {
+  "W60": 3.2114,
+  "Q60": 3.4555,
+  "C60": 3.2627,
+  "S1_60": 3.2973,
+  "S3_60": 3.2684
+ },
+ "PRIMARY_Q_minus_W": {
+  "delta": "Q60 minus W60",
+  "n_valid_pairs": 60,
+  "N_total": 60,
+  "N_valid": 60,
+  "N_positive": 48,
+  "N_negative": 12,
+  "N_tie": 0,
+  "five_field": {
+   "abs_mean_delta_tok_per_step": 0.2441,
+   "rel_percent": 7.6,
+   "median_delta": 0.1422,
+   "bootstrap95_CI": [
+    0.1247,
+    0.3578
+   ],
+   "positive_fraction": 0.8
+  },
+  "wilcoxon_p_normalapprox": 0.0,
+  "z": 5.367,
+  "verdict": "PASS"
+ },
+ "SECONDARY": {
+  "Q_minus_C0": {
+   "delta": "Q60 minus C60",
+   "n_valid_pairs": 60,
+   "N_total": 60,
+   "N_valid": 60,
+   "N_positive": 40,
+   "N_negative": 20,
+   "N_tie": 0,
+   "five_field": {
+    "abs_mean_delta_tok_per_step": 0.1928,
+    "rel_percent": 5.91,
+    "median_delta": 0.0534,
+    "bootstrap95_CI": [
+     0.0715,
+     0.3001
+    ],
+    "positive_fraction": 0.6667
+   },
+   "wilcoxon_p_normalapprox": 3e-05,
+   "z": 4.145
+  },
+  "Q_minus_S3_naive": {
+   "delta": "Q60 minus S3_60",
+   "n_valid_pairs": 60,
+   "N_total": 60,
+   "N_valid": 60,
+   "N_positive": 36,
+   "N_negative": 18,
+   "N_tie": 6,
+   "five_field": {
+    "abs_mean_delta_tok_per_step": 0.1871,
+    "rel_percent": 5.72,
+    "median_delta": 0.0185,
+    "bootstrap95_CI": [
+     0.0491,
+     0.3343
+    ],
+    "positive_fraction": 0.6
+   },
+   "wilcoxon_p_normalapprox": 0.00409,
+   "z": 2.872
+  },
+  "S1_minus_C0_B1C_retest": {
+   "delta": "S1_60 minus C60",
+   "n_valid_pairs": 60,
+   "N_total": 60,
+   "N_valid": 60,
+   "N_positive": 41,
+   "N_negative": 19,
+   "N_tie": 0,
+   "five_field": {
+    "abs_mean_delta_tok_per_step": 0.0346,
+    "rel_percent": 1.06,
+    "median_delta": 0.1401,
+    "bootstrap95_CI": [
+     -0.1094,
+     0.1536
+    ],
+    "positive_fraction": 0.6833
+   },
+   "wilcoxon_p_normalapprox": 0.02337,
+   "z": 2.267
+  }
+ },
+ "AUXILIARY_recovery_same_corpus": 7.055,
+ "engineering_Q_ge_3p5": false,
+ "four_quadrant": "最佳：量化基本被补偿",
+ "b11_contract": {
+  "W60": {
+   "self_deterministic": true,
+   "semantic_ok": true,
+   "sha12": "6ca65f3c5de0"
+  },
+  "Q60": {
+   "self_deterministic": true,
+   "semantic_ok": true,
+   "sha12": "21255d732391"
+  },
+  "C60": {
+   "self_deterministic": true,
+   "semantic_ok": true,
+   "sha12": "01e13d0cca4d"
+  },
+  "S1_60": {
+   "self_deterministic": true,
+   "semantic_ok": true,
+   "sha12": "a9e5e6482ada"
+  },
+  "S3_60": {
+   "self_deterministic": true,
+   "semantic_ok": true,
+   "sha12": "f3800e913985"
+  },
+  "Q_vs_W": "BENIGN-DIFF",
+  "Q_vs_C0": "BENIGN-DIFF",
+  "Q_vs_S3": "BENIGN-DIFF",
+  "S1_vs_C0": "BENIGN-DIFF"
+ },
+ "target_correctness": "PASS"
+}

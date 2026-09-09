@@ -1,0 +1,12 @@
+{
+ "self_deterministic": true,
+ "sha12": "a9e5e6482ada",
+ "chars": 1326,
+ "semantic": {
+  "ok": true,
+  "garbage": false,
+  "repeat_loop": false
+ },
+ "t3_tok_per_step": 3.0,
+ "text": "The RTX 3090's memory bandwidth is 936 GB/s, which is the maximum rate at which data can be moved between the GPU's memory and other components of the system. This bandwidth is determined by the number of memory streams and the speed of the memory controller.\n\nIn single-stream decoding, the GPU needs to read and process data from memory in a single stream. The memory bandwidth limits the amount of data that can be read and processed in a single stream. If the required data volume exceeds the available bandwidth, the decoding process will be bottlenecked by memory transfer, leading to slower overall performance.\n\nThe number of memory streams available in the GPU architecture determines the maximum number of streams that can be used for decoding. For example, if the GPU has 82 streaming multiprocessors, it can potentially support up to 82 memory streams. However, the actual number of streams used for decoding may be less than this maximum due to various factors such as the specific decoding algorithm, the type of data being decoded, and the available bandwidth of the memory controller.\n\nTherefore, the memory bandwidth of the RTX 3090, along with the number of memory streams and the type of data being decoded, are all critical factors in determining the performance of single-stream decoding on this hardware."
+}

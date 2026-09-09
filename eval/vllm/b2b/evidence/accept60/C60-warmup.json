@@ -1,0 +1,22 @@
+[
+ {
+  "target_tokens": 260,
+  "tag": "C60",
+  "drafts": 71.0,
+  "accepted": 160.0,
+  "tok_per_step": 3.2535211267605635,
+  "sha12": "4ab8e27ee648",
+  "chars": 1026,
+  "sec": 2.2
+ },
+ {
+  "target_tokens": 760,
+  "tag": "C60",
+  "drafts": 93.0,
+  "accepted": 234.0,
+  "tok_per_step": 3.5161290322580645,
+  "sha12": "c5686ef9f152",
+  "chars": 1340,
+  "sec": 3.0
+ }
+]

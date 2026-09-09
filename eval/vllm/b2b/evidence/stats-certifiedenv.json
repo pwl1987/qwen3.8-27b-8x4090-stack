@@ -1,0 +1,26 @@
+{
+ "N_total": 60,
+ "N_valid": 60,
+ "N_positive": 48,
+ "N_negative": 12,
+ "N_tie": 0,
+ "five_field": {
+  "abs_mean_delta_tok_per_step": -0.0109,
+  "rel_percent": -0.33,
+  "median_delta": 0.0443,
+  "bootstrap95_CI": [
+   -0.0846,
+   0.0555
+  ],
+  "positive_fraction": 0.8
+ },
+ "wilcoxon_p_normalapprox": 0.05468,
+ "z": 1.921,
+ "delta": "Q60cert minus W60cert",
+ "note": "certified env deterministic: Q cert#1 vs cert#2 bit-identical 60/60",
+ "verdict": "FAIL",
+ "phase_means": {
+  "W60_cert": 3.2668,
+  "Q60_cert": 3.256
+ }
+}

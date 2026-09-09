@@ -1,0 +1,22 @@
+[
+ {
+  "target_tokens": 260,
+  "tag": "Q60c",
+  "drafts": 73.0,
+  "accepted": 152.0,
+  "tok_per_step": 3.0821917808219177,
+  "sha12": "fb8a2a5a79cf",
+  "chars": 1083,
+  "sec": 2.0
+ },
+ {
+  "target_tokens": 760,
+  "tag": "Q60c",
+  "drafts": 95.0,
+  "accepted": 234.0,
+  "tok_per_step": 3.463157894736842,
+  "sha12": "cff04f126081",
+  "chars": 1347,
+  "sec": 2.8
+ }
+]
